@@ -173,10 +173,11 @@
         <span id="closeFormButton" title="Close settings">&times;</span>
         <h2>Pexels Wallpapers</h2>
         <ol>
-            <li>Installeer Plash: <a href="https://apps.apple.com/us/app/plash/id1494023538?mt=12" target="_blank" class="plash-button" style="margin-left: 5px; margin-bottom: 5px; padding: 5px 10px; font-size: 0.85em;">Open Plash in App Store</a></li>
-            <li>Voeg in Plash bij 'Websites' deze URL toe: <code>https://geert.github.io/pexel-wallpaper/</code></li>
-            <li>Vul hieronder je Pexels API key in.</li>
-            <li>Plak hieronder de URL van een Pexels Collection waaruit je wallpapers gekozen worden.</li>
+            <li>Install Plash: <button id="plashAppStoreButton" class="plash-button" onclick="window.open('https://apps.apple.com/nl/app/plash/id1494023538?mt=12', '_blank')">Open Plash in App Store</button></li>
+            <li>In Plash, under 'Websites', add this URL: <code>https://geert.github.io/pexel-wallpaper/</code></li>
+            <li>Enable Browsing Mode in Plash and continue via the screen on your desktop.</li>
+            <li>Enter your Pexels API key below.</li>
+            <li>Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen.</li>
         </ol>
         <div>
             <label for="apiKeyInput">Pexels API Key:
@@ -190,6 +191,7 @@
         </div>
         <button id="startButton">Apply Settings & Start Slideshow</button>
         <p id="input-error" style="color:red; margin-top:15px;"></p>
+        <div id="userAgentDisplay" style="margin-top: 15px; font-size: 0.8em; color: #555; word-break: break-all;"></div>
     </div>
     <div id="settingsHoverTrigger"></div>
 
@@ -202,13 +204,14 @@
                 "instruction1": "Install Plash: ",
                 "plashButtonText": "Open Plash in App Store",
                 "instruction2_1": "In Plash, under 'Websites', add this URL: ",
+                "instruction2_2": "Enable Browsing Mode in Plash and continue via the screen on your desktop.",
                 "instruction3": "Enter your Pexels API key below.",
                 "instruction4": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen.",
                 "apiKeyLabel": "Pexels API Key:",
                 "findApiKeyLink": "(Find my API Key)",
                 "apiKeyPlaceholder": "Your Pexels API Key",
                 "collectionUrlLabel": "Pexels Collection URL:",
-                "collectionUrlPlaceholder": "e.g., https://www.pexels.com/collections/pollinators-2r9xsvp/",
+                "collectionUrlPlaceholder": "e.g., https://www.pexels.com/collections/wallpapers-vmnecek/",
                 "startButtonText": "Apply Settings & Start Slideshow",
                 "errorBothRequired": "Both API Key and Collection URL are required.",
                 "errorInvalidPexelsUrl": "Invalid Pexels Collection URL or ID could not be extracted.",
@@ -236,13 +239,14 @@
                 "instruction1": "Installeer Plash: ",
                 "plashButtonText": "Open Plash in App Store",
                 "instruction2_1": "Voeg in Plash bij 'Websites' deze URL toe: ",
+                "instruction2_2": "Zet in Plash Browsing mode aan en ga verder via het scherm op je bureaublad.",
                 "instruction3": "Vul hieronder je Pexels API-sleutel in.",
                 "instruction4": "Plak hieronder de URL van een Pexels Collectie waaruit je achtergronden gekozen worden.",
                 "apiKeyLabel": "Pexels API-sleutel:",
                 "findApiKeyLink": "(Vind mijn API-sleutel)",
                 "apiKeyPlaceholder": "Uw Pexels API-sleutel",
                 "collectionUrlLabel": "Pexels Collectie URL:",
-                "collectionUrlPlaceholder": "bijv. https://www.pexels.com/collections/pollinators-2r9xsvp/",
+                "collectionUrlPlaceholder": "bijv. https://www.pexels.com/collections/wallpapers-vmnecek/",
                 "startButtonText": "Instellingen toepassen & start diavoorstelling",
                 "errorBothRequired": "Zowel API-sleutel als Collectie URL zijn vereist.",
                 "errorInvalidPexelsUrl": "Ongeldige Pexels Collectie URL of ID kon niet worden geëxtraheerd.",
@@ -270,13 +274,14 @@
                 "instruction1": "Installieren Sie Plash: ",
                 "plashButtonText": "Plash im App Store öffnen",
                 "instruction2_1": "Fügen Sie in Plash unter 'Websites' diese URL hinzu: ",
+                "instruction2_2": "Aktivieren Sie den Browsing-Modus in Plash und fahren Sie über den Bildschirm auf Ihrem Desktop fort.",
                 "instruction3": "Geben Sie unten Ihren Pexels API-Schlüssel ein.",
                 "instruction4": "Fügen Sie unten die URL einer Pexels-Sammlung ein, aus der Ihre Hintergrundbilder ausgewählt werden.",
                 "apiKeyLabel": "Pexels API-Schlüssel:",
                 "findApiKeyLink": "(Meinen API-Schlüssel finden)",
                 "apiKeyPlaceholder": "Ihr Pexels API-Schlüssel",
                 "collectionUrlLabel": "Pexels Sammlung URL:",
-                "collectionUrlPlaceholder": "z.B. https://www.pexels.com/collections/pollinators-2r9xsvp/",
+                "collectionUrlPlaceholder": "z.B. https://www.pexels.com/collections/wallpapers-vmnecek/",
                 "startButtonText": "Einstellungen anwenden & Diashow starten",
                 "errorBothRequired": "Sowohl API-Schlüssel als auch Sammlungs-URL sind erforderlich.",
                 "errorInvalidPexelsUrl": "Ungültige Pexels Sammlungs-URL oder ID konnte nicht extrahiert werden.",
@@ -304,13 +309,14 @@
                 "instruction1": "Installez Plash : ",
                 "plashButtonText": "Ouvrir Plash dans l'App Store",
                 "instruction2_1": "Dans Plash, sous 'Sites Web', ajoutez cette URL : ",
+                "instruction2_2": "Activez le mode de navigation dans Plash et continuez via l'écran de votre bureau.",
                 "instruction3": "Entrez votre clé API Pexels ci-dessous.",
                 "instruction4": "Collez ci-dessous l'URL d'une collection Pexels à partir de laquelle vos fonds d'écran seront choisis.",
                 "apiKeyLabel": "Clé API Pexels :",
                 "findApiKeyLink": "(Trouver ma clé API)",
                 "apiKeyPlaceholder": "Votre clé API Pexels",
                 "collectionUrlLabel": "URL de la collection Pexels :",
-                "collectionUrlPlaceholder": "par ex. https://www.pexels.com/collections/pollinators-2r9xsvp/",
+                "collectionUrlPlaceholder": "par ex. https://www.pexels.com/collections/wallpapers-vmnecek/",
                 "startButtonText": "Appliquer les paramètres et démarrer le diaporama",
                 "errorBothRequired": "La clé API et l'URL de la collection sont toutes deux requises.",
                 "errorInvalidPexelsUrl": "URL de collection Pexels non valide ou ID non extractible.",
@@ -376,8 +382,9 @@
             ol.children[0].querySelector('.plash-button').textContent = currentTranslations.plashButtonText;
             ol.children[1].childNodes[0].nodeValue = currentTranslations.instruction2_1; 
             // The <code>https://geert.github.io/pexel-wallpaper/</code> part remains as is.
-            ol.children[2].textContent = currentTranslations.instruction3;
-            ol.children[3].textContent = currentTranslations.instruction4;
+            ol.children[2].textContent = currentTranslations.instruction2_2; // New instruction
+            ol.children[3].textContent = currentTranslations.instruction3; // Was children[2]
+            ol.children[4].textContent = currentTranslations.instruction4; // Was children[3]
 
             inputContainer.querySelector('label[for="apiKeyInput"]').childNodes[0].nodeValue = currentTranslations.apiKeyLabel;
             inputContainer.querySelector('label[for="apiKeyInput"] .api-key-hint').textContent = currentTranslations.findApiKeyLink;
@@ -526,6 +533,7 @@
             inputContainer.classList.remove("hidden");
             statusOverlay.classList.add("hidden");
             wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
+            document.getElementById('userAgentDisplay').textContent = `User Agent: ${navigator.userAgent}`;
             document.addEventListener('keydown', handleEscKey); // Add ESC listener
         }
 
