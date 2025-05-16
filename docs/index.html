@@ -31,28 +31,67 @@
             font-size: 14px;
             z-index: 1000;
         }
-        #settingsButton { /* New Settings Button */
+        #settingsButton {
             position: fixed;
             top: 15px;
             left: 15px;
-            z-index: 999; /* Below status overlay and input form, but above wallpaper */
+            z-index: 999;
             background-color: rgba(50, 50, 50, 0.7);
             color: white;
             border: none;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-            line-height: 40px;
+            width: 44px;
+            height: 44px;
+            font-size: 22px;
+            line-height: 44px;
             text-align: center;
             cursor: pointer;
-            opacity: 0; /* Reverted: semi-transparent by default */
-            transition: opacity 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
         }
-        #settingsButton:hover { /* Re-added direct hover effect */
+        #settingsButton:hover {
+            background-color: rgba(0, 0, 0, 1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255,255,255,0.8);
+        }
+        #settingsHoverTrigger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 998;
+            /* background-color: rgba(0,255,0,0.05); /* For debugging the hover area */
+        }
+        #settingsHoverTrigger:hover ~ #settingsButton {
             opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            background-color: rgba(30, 30, 30, 0.95);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255,255,255,0.7);
         }
-        #closeFormButton { /* New: Style for the close button on the form */
+        #settingsHoverTrigger:hover ~ #settingsButtonLabel {
+            opacity: 1;
+            visibility: visible;
+        }
+        #settingsButtonLabel {
+            position: fixed;
+            top: 22px;
+            left: 68px;
+            padding: 7px 12px;
+            background-color: rgba(30, 30, 30, 0.95);
+            color: white;
+            border-radius: 5px;
+            font-size: 13px;
+            font-family: sans-serif;
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        #closeFormButton {
             position: absolute;
             top: 10px;
             right: 15px;
@@ -70,8 +109,8 @@
         .plash-button {
             display: inline-block;
             padding: 8px 15px;
-            margin-bottom: 15px; /* Space before the input fields */
-            background-color: #007aff; /* Apple blue */
+            margin-bottom: 15px;
+            background-color: #007aff;
             color: white;
             text-decoration: none;
             border-radius: 5px;
@@ -85,12 +124,12 @@
         }
         #input-container ol {
             text-align: left;
-            margin-left: 20px; /* Indent list a bit */
-            margin-bottom: 20px; /* Space before API key input */
-            padding-left: 20px; /* Space for list numbers */
+            margin-left: 20px;
+            margin-bottom: 20px;
+            padding-left: 20px;
         }
         #input-container ol li {
-            margin-bottom: 10px; /* Space between list items */
+            margin-bottom: 10px;
             line-height: 1.4;
         }
         #input-container {
@@ -104,7 +143,7 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.3);
             z-index: 1001;
             text-align: center;
-            min-width: 350px; 
+            min-width: 350px;
         }
         #input-container h2 {
             margin-top: 0;
@@ -121,7 +160,7 @@
         }
         #input-container input[type="text"],
         #input-container input[type="password"] {
-            width: calc(100% - 22px); 
+            width: calc(100% - 22px);
             padding: 10px;
             margin-top: 5px;
             border: 1px solid #ccc;
@@ -141,26 +180,13 @@
         #input-container button:hover {
             background-color: #0056b3;
         }
-        .api-key-hint { 
+        .api-key-hint {
             font-size: 0.8em;
             font-weight: normal;
             margin-left: 5px;
         }
         .hidden {
             display: none !important;
-        }
-        #settingsHoverTrigger { /* New: Invisible area to trigger button visibility */
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 80px;  /* Defines the 'near' area, e.g., 80x80px box */
-            height: 80px; 
-            z-index: 998; /* Below the button itself, so button can be clicked */
-            /* background-color: rgba(0,255,0,0.05); /* For debugging the hover area */
-        }
-        #settingsHoverTrigger:hover ~ #settingsButton { /* Show button when trigger area is hovered */
-            opacity: 1;
-            pointer-events: auto; /* Make button clickable */
         }
     </style>
     <!-- Include these tags in your <head> -->
@@ -171,9 +197,11 @@
     <meta name="theme-color" content="#0066ff">
 </head>
 <body>
+    <div id="settingsHoverTrigger"></div>
     <div id="status-overlay" class="hidden">Loading...</div>
     <img id="wallpaper" src="" alt="Loading wallpaper...">
     <button id="settingsButton" title="Change API Key or Collection">⚙️</button>
+    <span id="settingsButtonLabel">Open instellingen</span>
 
     <div id="input-container" class="hidden">
         <span id="closeFormButton" title="Close settings">&times;</span>
@@ -199,11 +227,10 @@
         <p id="input-error" style="color:red; margin-top:15px;"></p>
         
     </div>
-    <div id="settingsHoverTrigger"></div>
 
     <script>
         const translations = {
-            "us": { // Default: US English
+            "us": { 
                 "settingsButtonTitle": "Change API Key or Collection",
                 "closeFormButtonTitle": "Close settings",
                 "formTitle": "Pexels Wallpapers",
@@ -345,8 +372,8 @@
             }
         };
 
-        let currentLang = "us"; // Default language key
-        let currentTranslations = translations.us; // Default translations object
+        let currentLang = "us"; 
+        let currentTranslations = translations.us; 
 
         const localImageUrlsFile = "pexels_photo_urls.txt";
         let defaultSlideshowIntervalId = null;
@@ -354,13 +381,13 @@
         let defaultCurrentIndex = 0;
 
         function getBrowserLanguage() {
-            const lang = navigator.language || navigator.userLanguage; // e.g., "en-US", "nl-NL"
+            const lang = navigator.language || navigator.userLanguage; 
             if (lang) {
-                const primaryLang = lang.split('-')[0].toLowerCase(); // e.g., "en", "nl"
-                if (primaryLang === "en") return "us"; // Map general English to "us"
-                return primaryLang; // "nl", "de", "fr"
+                const primaryLang = lang.split('-')[0].toLowerCase(); 
+                if (primaryLang === "en") return "us"; 
+                return primaryLang; 
             }
-            return "us"; // Fallback
+            return "us"; 
         }
 
         function setLanguage() {
@@ -369,14 +396,14 @@
                 currentLang = browserLangKey;
                 currentTranslations = translations[browserLangKey];
             } else {
-                currentLang = "us"; // Fallback to default if detected lang not in our translations
+                currentLang = "us"; 
                 currentTranslations = translations.us;
             }
             translatePage();
         }
 
         function translatePage() {
-            document.title = currentTranslations.formTitle; // Update page title as well
+            document.title = currentTranslations.formTitle; 
             document.getElementById('settingsButton').title = currentTranslations.settingsButtonTitle;
             document.getElementById('closeFormButton').title = currentTranslations.closeFormButtonTitle;
 
@@ -387,10 +414,9 @@
             ol.children[0].childNodes[0].nodeValue = currentTranslations.instruction1;
             ol.children[0].querySelector('.plash-button').textContent = currentTranslations.plashButtonText;
             ol.children[1].childNodes[0].nodeValue = currentTranslations.instruction2_1; 
-            // The <code>https://geert.github.io/pexel-wallpaper/</code> part remains as is.
-            ol.children[2].textContent = currentTranslations.instruction2_2; // New instruction
-            ol.children[3].textContent = currentTranslations.instruction3; // Was children[2]
-            ol.children[4].textContent = currentTranslations.instruction4; // Was children[3]
+            ol.children[2].textContent = currentTranslations.instruction2_2; 
+            ol.children[3].textContent = currentTranslations.instruction3; 
+            ol.children[4].textContent = currentTranslations.instruction4; 
 
             inputContainer.querySelector('label[for="apiKeyInput"]').childNodes[0].nodeValue = currentTranslations.apiKeyLabel;
             inputContainer.querySelector('label[for="apiKeyInput"] .api-key-hint').textContent = currentTranslations.findApiKeyLink;
@@ -401,7 +427,6 @@
             
             document.getElementById('startButton').textContent = currentTranslations.startButtonText;
 
-            // Update alt texts for initial state if wallpaper is already trying to load
             if (wallpaperElement.alt.includes("Loading") || wallpaperElement.alt.includes("Laden")) {
                  wallpaperElement.alt = currentTranslations.wallpaperAltLoading;
             }
@@ -410,14 +435,14 @@
             }
         }
 
-        const changeInterval = 300000; // 5 minutes
+        const changeInterval = 300000; 
         const PHOTO_SIZE_TO_DISPLAY = "original";
         const PEXELS_BASE_URL = "https://api.pexels.com/v1/";
         const PHOTOS_PER_PAGE = 80;
 
         let images = [];
         let currentIndex = 0;
-        let slideshowIntervalId = null; // To store the interval ID
+        let slideshowIntervalId = null; 
 
         const wallpaperElement = document.getElementById("wallpaper");
         const statusOverlay = document.getElementById("status-overlay");
@@ -427,9 +452,8 @@
         const collectionUrlInput = document.getElementById("collectionUrlInput");
         const startButton = document.getElementById("startButton");
         const inputError = document.getElementById("input-error");
-        const closeFormButton = document.getElementById("closeFormButton"); // New: close button
+        const closeFormButton = document.getElementById("closeFormButton"); 
 
-        // --- Cookie Helper Functions ---
         function setCookie(name, value, days) {
             let expires = "";
             if (days) {
@@ -478,7 +502,7 @@
         async function fetchPhotosFromPexelsAPI(apiKey, collectionId) {
             statusOverlay.classList.remove("hidden");
             statusOverlay.textContent = currentTranslations.statusLoading;
-            wallpaperElement.src = ""; // Clear previous image
+            wallpaperElement.src = ""; 
             wallpaperElement.alt = currentTranslations.wallpaperAltFetching;
             let allPhotoUrls = [];
             let nextPageUrl = `${PEXELS_BASE_URL}collections/${collectionId}?type=photos&per_page=${PHOTOS_PER_PAGE}&page=1`;
@@ -539,34 +563,32 @@
             inputContainer.classList.remove("hidden");
             statusOverlay.classList.add("hidden");
             wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
-            document.addEventListener('keydown', handleEscKey); // Add ESC listener
+            document.addEventListener('keydown', handleEscKey); 
         }
 
-        function hideSettingsForm() { // New: Function to hide the form and resume slideshow
+        function hideSettingsForm() { 
             inputContainer.classList.add("hidden");
-            document.removeEventListener('keydown', handleEscKey); // Remove ESC listener
-            // Resume slideshow if it was paused by showSettingsForm and images are loaded
+            document.removeEventListener('keydown', handleEscKey); 
             if (images.length > 0 && !slideshowIntervalId) { 
                 slideshowIntervalId = setInterval(setWallpaper, changeInterval);
                 console.log(currentTranslations.slideshowResumed);
             }
         }
 
-        function handleEscKey(event) { // New: Handler for ESC key
+        function handleEscKey(event) { 
             if (event.key === "Escape" && !inputContainer.classList.contains("hidden")) {
                 hideSettingsForm();
             }
         }
 
         async function initializeSlideshow(apiKey, collectionId, collectionFullUrl) {
-            if (slideshowIntervalId) { // Clear any existing interval before starting a new one
+            if (slideshowIntervalId) { 
                 clearInterval(slideshowIntervalId);
                 slideshowIntervalId = null;
             }
             inputContainer.classList.add("hidden"); 
             images = await fetchPhotosFromPexelsAPI(apiKey, collectionId);
             if (images.length > 0) {
-                // Save successful full URL if provided
                 if (collectionFullUrl) setCookie("lastPexelCollectionUrl", collectionFullUrl, 30);
 
                 shuffleArray(images);
@@ -586,9 +608,9 @@
             }
             setCookie("pexelApiKey", "", -1); 
             setCookie("pexelCollectionId", "", -1); 
-            setCookie("lastPexelCollectionUrl", "", -1); // Clear last used URL
+            setCookie("lastPexelCollectionUrl", "", -1); 
             
-            showSettingsForm(); // Re-use to populate and show form
+            showSettingsForm(); 
         }
 
         function handleConfiguration() {
@@ -608,7 +630,7 @@
                 console.log(`Using API Key from URL and extracted Collection ID: ${collectionIdToUse} from URL: ${collectionUrlParam}`);
                 setCookie("pexelApiKey", apiKey, 30); 
                 setCookie("pexelCollectionId", collectionIdToUse, 30);
-                setCookie("lastPexelCollectionUrl", collectionUrlParam, 30); // Save full URL from param
+                setCookie("lastPexelCollectionUrl", collectionUrlParam, 30); 
                 initializeSlideshow(apiKey, collectionIdToUse, collectionUrlParam);
             } else {
                 const cookieApiKey = getCookie("pexelApiKey");
@@ -616,20 +638,17 @@
 
                 if (cookieApiKey && cookieCollectionId) {
                     console.log(`Using API Key and Collection ID (${cookieCollectionId}) from cookies.`);
-                    // We don't pass the full URL here, as initializeSlideshow will try to get it from lastPexelCollectionUrl cookie if needed for form repopulation later.
-                    // Or, better, initializeSlideshow doesn't need the full URL, only startButton click does.
                     initializeSlideshow(cookieApiKey, cookieCollectionId, getCookie("lastPexelCollectionUrl"));
                 } else {
-                    console.log("No valid API Key/Collection info found. Showing input form by default.");
-                    wallpaperElement.alt = currentTranslations.wallpaperAltConfigure; // Update alt text
-                    showSettingsForm(); 
-                    startDefaultSlideshowFromLocalFile(); // Attempt to start default slideshow
+                    console.log("No valid API Key/Collection info found.");
+                    wallpaperElement.alt = currentTranslations.wallpaperAltConfigure; 
+                    startDefaultSlideshowFromLocalFile(); 
                 }
             }
         }
 
-        settingsButton.addEventListener('click', showSettingsForm); // Existing listener
-        closeFormButton.addEventListener('click', hideSettingsForm); // New: Listener for close button
+        settingsButton.addEventListener('click', showSettingsForm); 
+        closeFormButton.addEventListener('click', hideSettingsForm); 
 
         startButton.addEventListener('click', () => {
             const apiKey = apiKeyInput.value.trim();
@@ -650,15 +669,14 @@
             console.log(`Using API Key from input and extracted Collection ID: ${collectionId} from URL: ${collectionUrl}`);
             setCookie("pexelApiKey", apiKey, 30);
             setCookie("pexelCollectionId", collectionId, 30); 
-            setCookie("lastPexelCollectionUrl", collectionUrl, 30); // Save successfully submitted URL
+            setCookie("lastPexelCollectionUrl", collectionUrl, 30); 
             
             initializeSlideshow(apiKey, collectionId, collectionUrl);
         });
 
-        // --- Default Slideshow from Local File ---
         async function startDefaultSlideshowFromLocalFile() {
-            if (slideshowIntervalId) return; // Don't start if Pexels slideshow is already running/configured
-            if (defaultSlideshowIntervalId) return; // Don't start if already running
+            if (slideshowIntervalId) return; 
+            if (defaultSlideshowIntervalId) return; 
 
             try {
                 wallpaperElement.alt = currentTranslations.wallpaperAltLocalLoading;
@@ -683,7 +701,7 @@
                 setDefaultWallpaper();
                 defaultSlideshowIntervalId = setInterval(setDefaultWallpaper, changeInterval);
                 console.log(currentTranslations.defaultSlideshowStarted);
-                statusOverlay.classList.add("hidden"); // Hide any previous status if we successfully start
+                statusOverlay.classList.add("hidden"); 
             } catch (error) {
                 console.error("Failed to load or process local image URLs:", error);
                 wallpaperElement.alt = currentTranslations.wallpaperAltLocalError;
@@ -710,11 +728,10 @@
                 console.log(currentTranslations.defaultSlideshowStopped);
             }
         }
-        // --- End Default Slideshow ---
 
         document.addEventListener('DOMContentLoaded', () => {
-            setLanguage(); // Set language first
-            handleConfiguration(); // Then handle configuration which might show UI
+            setLanguage(); 
+            handleConfiguration(); 
         });
     </script>
 </body>
