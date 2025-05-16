@@ -186,7 +186,7 @@
         </div>
         <div>
             <label for="collectionUrlInput">Pexels Collection URL:</label>
-            <input type="text" id="collectionUrlInput" placeholder="e.g., https://www.pexels.com/collections/pollinators-2r9xsvp/">
+            <input type="text" id="collectionUrlInput" placeholder="e.g., https://www.pexels.com/collections/wallpapers-vmnecek/">
         </div>
         <button id="startButton">Apply Settings & Start Slideshow</button>
         <p id="input-error" style="color:red; margin-top:15px;"></p>
@@ -222,7 +222,12 @@
                 "statusCheckDetails": " Please check API key/Collection details.",
                 "statusTryAgain": "Try again?",
                 "slideshowPaused": "Slideshow paused.",
-                "slideshowResumed": "Slideshow resumed."
+                "slideshowResumed": "Slideshow resumed.",
+                "wallpaperAltLocalLoading": "Loading default wallpaper...",
+                "wallpaperAltLocalError": "Error loading default wallpapers. Please create pexels_photo_urls.txt.",
+                "statusLocalFileNotFound": "Default wallpaper file (pexels_photo_urls.txt) not found or empty. Please create it or configure Pexels API.",
+                "defaultSlideshowStopped": "Default local slideshow stopped.",
+                "defaultSlideshowStarted": "Default local slideshow started."
             },
             "nl": {
                 "settingsButtonTitle": "Wijzig API-sleutel of collectie",
@@ -251,7 +256,12 @@
                 "statusCheckDetails": " Controleer API-sleutel/Collectie details.",
                 "statusTryAgain": "Opnieuw proberen?",
                 "slideshowPaused": "Diavoorstelling gepauzeerd.",
-                "slideshowResumed": "Diavoorstelling hervat."
+                "slideshowResumed": "Diavoorstelling hervat.",
+                "wallpaperAltLocalLoading": "Standaard achtergrond laden...",
+                "wallpaperAltLocalError": "Fout bij laden standaard achtergronden. Maak pexels_photo_urls.txt aan.",
+                "statusLocalFileNotFound": "Standaard achtergrondbestand (pexels_photo_urls.txt) niet gevonden of leeg. Maak dit aan of configureer de Pexels API.",
+                "defaultSlideshowStopped": "Standaard lokale diavoorstelling gestopt.",
+                "defaultSlideshowStarted": "Standaard lokale diavoorstelling gestart."
             },
             "de": {
                 "settingsButtonTitle": "API-Schlüssel oder Sammlung ändern",
@@ -280,7 +290,12 @@
                 "statusCheckDetails": " Bitte überprüfen Sie API-Schlüssel/Sammlungsdetails.",
                 "statusTryAgain": "Erneut versuchen?",
                 "slideshowPaused": "Diashow angehalten.",
-                "slideshowResumed": "Diashow fortgesetzt."
+                "slideshowResumed": "Diashow fortgesetzt.",
+                "wallpaperAltLocalLoading": "Standard-Hintergrundbild wird geladen...",
+                "wallpaperAltLocalError": "Fehler beim Laden der Standard-Hintergrundbilder. Bitte erstellen Sie pexels_photo_urls.txt.",
+                "statusLocalFileNotFound": "Standard-Hintergrundbilddatei (pexels_photo_urls.txt) nicht gefunden oder leer. Bitte erstellen Sie sie oder konfigurieren Sie die Pexels-API.",
+                "defaultSlideshowStopped": "Standard-Diashow (lokal) gestoppt.",
+                "defaultSlideshowStarted": "Standard-Diashow (lokal) gestartet."
             },
             "fr": {
                 "settingsButtonTitle": "Modifier la clé API ou la collection",
@@ -309,12 +324,22 @@
                 "statusCheckDetails": " Veuillez vérifier les détails de la clé API/collection.",
                 "statusTryAgain": "Réessayer ?",
                 "slideshowPaused": "Diaporama en pause.",
-                "slideshowResumed": "Diaporama repris."
+                "slideshowResumed": "Diaporama repris.",
+                "wallpaperAltLocalLoading": "Chargement du fond d'écran par défaut...",
+                "wallpaperAltLocalError": "Erreur lors du chargement des fonds d'écran par défaut. Veuillez créer pexels_photo_urls.txt.",
+                "statusLocalFileNotFound": "Fichier de fonds d'écran par défaut (pexels_photo_urls.txt) introuvable ou vide. Veuillez le créer ou configurer l'API Pexels.",
+                "defaultSlideshowStopped": "Diaporama local par défaut arrêté.",
+                "defaultSlideshowStarted": "Diaporama local par défaut démarré."
             }
         };
 
         let currentLang = "us"; // Default language key
         let currentTranslations = translations.us; // Default translations object
+
+        const localImageUrlsFile = "pexels_photo_urls.txt";
+        let defaultSlideshowIntervalId = null;
+        let defaultImages = [];
+        let defaultCurrentIndex = 0;
 
         function getBrowserLanguage() {
             const lang = navigator.language || navigator.userLanguage; // e.g., "en-US", "nl-NL"
@@ -584,7 +609,8 @@
                 } else {
                     console.log("No valid API Key/Collection info found. Showing input form by default.");
                     wallpaperElement.alt = currentTranslations.wallpaperAltConfigure; // Update alt text
-                    showSettingsForm(); // Show form instead of just making it visible
+                    showSettingsForm(); 
+                    startDefaultSlideshowFromLocalFile(); // Attempt to start default slideshow
                 }
             }
         }
@@ -615,6 +641,63 @@
             
             initializeSlideshow(apiKey, collectionId, collectionUrl);
         });
+
+        // --- Default Slideshow from Local File ---
+        async function startDefaultSlideshowFromLocalFile() {
+            if (slideshowIntervalId) return; // Don't start if Pexels slideshow is already running/configured
+            if (defaultSlideshowIntervalId) return; // Don't start if already running
+
+            try {
+                wallpaperElement.alt = currentTranslations.wallpaperAltLocalLoading;
+                const response = await fetch(localImageUrlsFile);
+                if (!response.ok) {
+                    console.error(`Error fetching ${localImageUrlsFile}: ${response.statusText}`);
+                    wallpaperElement.alt = currentTranslations.wallpaperAltLocalError;
+                    showStatus(currentTranslations.statusLocalFileNotFound, true);
+                    return;
+                }
+                const text = await response.text();
+                defaultImages = text.split("\n").filter(url => url.trim() !== "");
+                
+                if (defaultImages.length === 0) {
+                    console.error("No image URLs found in the local file.");
+                    wallpaperElement.alt = currentTranslations.wallpaperAltLocalError;
+                    showStatus(currentTranslations.statusLocalFileNotFound, true);
+                    return;
+                }
+                
+                shuffleArray(defaultImages);
+                setDefaultWallpaper();
+                defaultSlideshowIntervalId = setInterval(setDefaultWallpaper, changeInterval);
+                console.log(currentTranslations.defaultSlideshowStarted);
+                statusOverlay.classList.add("hidden"); // Hide any previous status if we successfully start
+            } catch (error) {
+                console.error("Failed to load or process local image URLs:", error);
+                wallpaperElement.alt = currentTranslations.wallpaperAltLocalError;
+                showStatus(currentTranslations.statusLocalFileNotFound + " (" + error.message + ")", true);
+            }
+        }
+
+        function setDefaultWallpaper() {
+            if (defaultImages.length === 0) return;
+            wallpaperElement.src = defaultImages[defaultCurrentIndex];
+            wallpaperElement.alt = `${currentTranslations.wallpaperAltWallpaper} (Default) ${defaultCurrentIndex + 1} ${currentTranslations.wallpaperAltOf} ${defaultImages.length}`;
+            defaultCurrentIndex = (defaultCurrentIndex + 1) % defaultImages.length;
+            if (defaultCurrentIndex === 0) { 
+                shuffleArray(defaultImages);
+            }
+        }
+
+        function stopDefaultSlideshow() {
+            if (defaultSlideshowIntervalId) {
+                clearInterval(defaultSlideshowIntervalId);
+                defaultSlideshowIntervalId = null;
+                defaultImages = [];
+                defaultCurrentIndex = 0;
+                console.log(currentTranslations.defaultSlideshowStopped);
+            }
+        }
+        // --- End Default Slideshow ---
 
         document.addEventListener('DOMContentLoaded', () => {
             setLanguage(); // Set language first
