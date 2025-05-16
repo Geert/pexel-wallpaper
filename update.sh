@@ -1,0 +1,1 @@
+python3 fetch_pexels_urls.py
