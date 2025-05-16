@@ -1,7 +1,7 @@
 {
-  "name": "WallSet",
-  "short_name": "WallSet",
-  "description": "Set macOS wallpapers from the web.",
+  "name": "Pexels Wallpapers",
+  "short_name": "Pexels Wallpapers",
+  "description": "Set macOS wallpapers from Pexels.",
   "icons": [
     {
       "src": "icon-192.png",
