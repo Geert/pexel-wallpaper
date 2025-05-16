@@ -31,44 +31,76 @@
             font-size: 14px;
             z-index: 1000;
         }
+        #settingsButton { /* New Settings Button */
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 999; /* Below status overlay and input form, but above wallpaper */
+            background-color: rgba(50, 50, 50, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            line-height: 40px;
+            text-align: center;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: opacity 0.3s ease;
+        }
+        #settingsButton:hover {
+            opacity: 1;
+        }
         #input-container {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: rgba(255,255,255,0.9);
-            padding: 20px;
+            background-color: rgba(255,255,255,0.95);
+            padding: 25px;
             border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
             z-index: 1001;
             text-align: center;
-            min-width: 350px; /* Ensure some base width */
+            min-width: 350px; 
         }
         #input-container h2 {
             margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        #input-container p {
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            color: #555;
         }
         #input-container label {
             display: block;
-            margin-top: 10px;
+            margin-top: 15px;
             text-align: left;
             font-weight: bold;
+            color: #444;
+            font-size: 0.9em;
         }
         #input-container input[type="text"],
         #input-container input[type="password"] {
-            width: calc(100% - 22px); /* Account for padding and border */
+            width: calc(100% - 22px); 
             padding: 10px;
             margin-top: 5px;
             border: 1px solid #ccc;
             border-radius: 4px;
+            box-sizing: border-box;
         }
         #input-container button {
-            margin-top: 20px;
-            padding: 10px 20px;
+            margin-top: 25px;
+            padding: 12px 25px;
             background-color: #007bff;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 1em;
         }
         #input-container button:hover {
             background-color: #0056b3;
@@ -86,10 +118,11 @@
 <body>
     <div id="status-overlay" class="hidden">Loading...</div>
     <img id="wallpaper" src="" alt="Loading wallpaper...">
+    <button id="settingsButton" title="Change API Key or Collection">⚙️</button>
 
     <div id="input-container" class="hidden">
         <h2>Pexels API Configuration</h2>
-        <p>Please enter your Pexels API Key and Collection URL.</p>
+        <p>Modify your Pexels API Key or Collection URL below.</p>
         <div>
             <label for="apiKeyInput">Pexels API Key:
                 <a href="https://www.pexels.com/api/key/" target="_blank" class="api-key-hint">(Find my API Key)</a>
@@ -101,7 +134,7 @@
             <input type="text" id="collectionUrlInput" placeholder="e.g., https://www.pexels.com/collections/pollinators-2r9xsvp/">
         </div>
         <button id="startButton">Start Slideshow</button>
-        <p id="input-error" style="color:red; margin-top:10px;"></p>
+        <p id="input-error" style="color:red; margin-top:15px;"></p>
     </div>
 
     <script>
@@ -112,11 +145,14 @@
 
         let images = [];
         let currentIndex = 0;
+        let slideshowIntervalId = null; // To store the interval ID
+
         const wallpaperElement = document.getElementById("wallpaper");
         const statusOverlay = document.getElementById("status-overlay");
+        const settingsButton = document.getElementById("settingsButton");
         const inputContainer = document.getElementById("input-container");
         const apiKeyInput = document.getElementById("apiKeyInput");
-        const collectionUrlInput = document.getElementById("collectionUrlInput"); // Changed ID
+        const collectionUrlInput = document.getElementById("collectionUrlInput");
         const startButton = document.getElementById("startButton");
         const inputError = document.getElementById("input-error");
 
@@ -142,35 +178,23 @@
             return null;
         }
 
-        // --- NEW: Function to extract Collection ID from URL ---
         function extractCollectionIdFromUrl(url) {
             try {
                 const parsedUrl = new URL(url);
-                if (parsedUrl.hostname !== 'www.pexels.com' && parsedUrl.hostname !== 'pexels.com') {
-                    return null; 
-                }
+                if (parsedUrl.hostname !== 'www.pexels.com' && parsedUrl.hostname !== 'pexels.com') return null; 
                 const pathSegments = parsedUrl.pathname.split('/').filter(segment => segment.length > 0);
-                // Expected format: /collections/[slug-id]/
-                if (pathSegments.length < 2 || pathSegments[0] !== 'collections') {
-                    return null;
-                }
+                if (pathSegments.length < 2 || pathSegments[0] !== 'collections') return null;
                 const slugWithId = pathSegments[1];
                 const idParts = slugWithId.split('-');
-                if (idParts.length < 2) return null; // slug must contain at least one hyphen before the id
-                
+                if (idParts.length < 2) return null;
                 const potentialId = idParts.pop();
-                // Basic check if ID looks like a Pexels ID (alphanumeric, often 6-7 chars)
-                if (/^[a-zA-Z0-9]+$/.test(potentialId)) {
-                    return potentialId;
-                }
-                return null;
+                return /^[a-zA-Z0-9]+$/.test(potentialId) ? potentialId : null;
             } catch (e) {
                 console.error("Invalid URL for Collection ID extraction:", e);
                 return null;
             }
         }
 
-        // --- Slideshow Logic ---
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -184,7 +208,7 @@
             wallpaperElement.alt = `Fetching photos...`;
             let allPhotoUrls = [];
             let nextPageUrl = `${PEXELS_BASE_URL}collections/${collectionId}?type=photos&per_page=${PHOTOS_PER_PAGE}&page=1`;
-            const headers = { "Authorization": apiKey, "User-Agent": "PexelWallpaperDynamic/1.3" }; 
+            const headers = { "Authorization": apiKey, "User-Agent": "PexelWallpaperDynamic/1.4" }; 
 
             try {
                 while (nextPageUrl) {
@@ -224,70 +248,91 @@
             wallpaperElement.src = images[currentIndex];
             wallpaperElement.alt = `Wallpaper ${currentIndex + 1} of ${images.length}`;
             currentIndex = (currentIndex + 1) % images.length;
-            if (currentIndex === 0) { 
-                 shuffleArray(images); 
+            if (currentIndex === 0) shuffleArray(images); 
+        }
+        
+        function showSettingsForm() {
+            if (slideshowIntervalId) {
+                clearInterval(slideshowIntervalId);
+                slideshowIntervalId = null;
             }
+            apiKeyInput.value = getCookie("pexelApiKey") || "";
+            collectionUrlInput.value = getCookie("lastPexelCollectionUrl") || "";
+            inputError.textContent = "";
+            inputContainer.classList.remove("hidden");
+            statusOverlay.classList.add("hidden");
+            wallpaperElement.alt = "Configure API Key and Collection URL."; // Or keep current image
         }
 
-        // --- Main Application Logic ---
-        async function initializeSlideshow(apiKey, collectionId) {
+        async function initializeSlideshow(apiKey, collectionId, collectionFullUrl) {
+            if (slideshowIntervalId) { // Clear any existing interval before starting a new one
+                clearInterval(slideshowIntervalId);
+                slideshowIntervalId = null;
+            }
             inputContainer.classList.add("hidden"); 
             images = await fetchPhotosFromPexelsAPI(apiKey, collectionId);
             if (images.length > 0) {
+                // Save successful full URL if provided
+                if (collectionFullUrl) setCookie("lastPexelCollectionUrl", collectionFullUrl, 30);
+
                 shuffleArray(images);
                 setWallpaper();
-                setInterval(setWallpaper, changeInterval);
+                slideshowIntervalId = setInterval(setWallpaper, changeInterval);
             } else {
                 statusOverlay.textContent += " Please check API key/Collection details.";
                 statusOverlay.innerHTML += ' <a href="#" onclick="clearSettingsAndShowForm(); return false;">Try again?</a>';
+                 // Do not hide settingsButton here, allow user to retry.
             }
         }
         
         function clearSettingsAndShowForm() {
+            if (slideshowIntervalId) {
+                clearInterval(slideshowIntervalId);
+                slideshowIntervalId = null;
+            }
             setCookie("pexelApiKey", "", -1); 
-            setCookie("pexelCollectionId", "", -1); // Cookie stores only the ID
-            apiKeyInput.value = "";
-            collectionUrlInput.value = ""; // Clear URL input
-            inputError.textContent = "";
-            inputContainer.classList.remove("hidden");
-            statusOverlay.classList.add("hidden");
-            wallpaperElement.alt = "Please configure API Key and Collection URL.";
+            setCookie("pexelCollectionId", "", -1); 
+            setCookie("lastPexelCollectionUrl", "", -1); // Clear last used URL
+            
+            showSettingsForm(); // Re-use to populate and show form
         }
 
         function handleConfiguration() {
             const urlParams = new URLSearchParams(window.location.search);
             let apiKey = urlParams.get('apiKey');
-            let collectionUrlParam = urlParams.get('collectionUrl'); // New: expecting full URL
+            let collectionUrlParam = urlParams.get('collectionUrl');
             let collectionIdToUse = null;
 
             if (collectionUrlParam) {
                 collectionIdToUse = extractCollectionIdFromUrl(collectionUrlParam);
                 if (!collectionIdToUse) {
                     console.warn("Could not extract Collection ID from URL parameter: " + collectionUrlParam);
-                    // Proceed without collection ID from URL, will fall to cookies or input form
                 }
             }
 
             if (apiKey && collectionIdToUse) {
-                console.log(`Using API Key from URL and extracted Collection ID: ${collectionIdToUse} from URL.`);
+                console.log(`Using API Key from URL and extracted Collection ID: ${collectionIdToUse} from URL: ${collectionUrlParam}`);
                 setCookie("pexelApiKey", apiKey, 30); 
-                setCookie("pexelCollectionId", collectionIdToUse, 30); // Store only the ID
-                initializeSlideshow(apiKey, collectionIdToUse);
+                setCookie("pexelCollectionId", collectionIdToUse, 30);
+                setCookie("lastPexelCollectionUrl", collectionUrlParam, 30); // Save full URL from param
+                initializeSlideshow(apiKey, collectionIdToUse, collectionUrlParam);
             } else {
                 const cookieApiKey = getCookie("pexelApiKey");
-                const cookieCollectionId = getCookie("pexelCollectionId"); // This is already an ID
+                const cookieCollectionId = getCookie("pexelCollectionId"); 
 
                 if (cookieApiKey && cookieCollectionId) {
                     console.log(`Using API Key and Collection ID (${cookieCollectionId}) from cookies.`);
-                    initializeSlideshow(cookieApiKey, cookieCollectionId);
+                    // We don't pass the full URL here, as initializeSlideshow will try to get it from lastPexelCollectionUrl cookie if needed for form repopulation later.
+                    // Or, better, initializeSlideshow doesn't need the full URL, only startButton click does.
+                    initializeSlideshow(cookieApiKey, cookieCollectionId, getCookie("lastPexelCollectionUrl"));
                 } else {
-                    console.log("No valid API Key/Collection info found in URL or cookies. Showing input form.");
-                    inputContainer.classList.remove("hidden");
-                    statusOverlay.classList.add("hidden"); 
-                    wallpaperElement.alt = "Please configure API Key and Collection URL.";
+                    console.log("No valid API Key/Collection info found. Showing input form by default.");
+                    showSettingsForm(); // Show form instead of just making it visible
                 }
             }
         }
+
+        settingsButton.addEventListener('click', showSettingsForm);
 
         startButton.addEventListener('click', () => {
             const apiKey = apiKeyInput.value.trim();
@@ -305,10 +350,12 @@
                 return;
             }
 
-            console.log(`Using API Key from input and extracted Collection ID: ${collectionId}`);
+            console.log(`Using API Key from input and extracted Collection ID: ${collectionId} from URL: ${collectionUrl}`);
             setCookie("pexelApiKey", apiKey, 30);
-            setCookie("pexelCollectionId", collectionId, 30); // Store only the ID
-            initializeSlideshow(apiKey, collectionId);
+            setCookie("pexelCollectionId", collectionId, 30); 
+            setCookie("lastPexelCollectionUrl", collectionUrl, 30); // Save successfully submitted URL
+            
+            initializeSlideshow(apiKey, collectionId, collectionUrl);
         });
 
         document.addEventListener('DOMContentLoaded', handleConfiguration);
