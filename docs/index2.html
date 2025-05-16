@@ -42,7 +42,7 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.2);
             z-index: 1001;
             text-align: center;
-            min-width: 300px; /* Ensure some base width */
+            min-width: 350px; /* Ensure some base width */
         }
         #input-container h2 {
             margin-top: 0;
@@ -73,7 +73,7 @@
         #input-container button:hover {
             background-color: #0056b3;
         }
-        .api-key-hint { /* Style for the new hint link */
+        .api-key-hint { 
             font-size: 0.8em;
             font-weight: normal;
             margin-left: 5px;
@@ -89,7 +89,7 @@
 
     <div id="input-container" class="hidden">
         <h2>Pexels API Configuration</h2>
-        <p>Please enter your Pexels API Key and Collection ID.</p>
+        <p>Please enter your Pexels API Key and Collection URL.</p>
         <div>
             <label for="apiKeyInput">Pexels API Key:
                 <a href="https://www.pexels.com/api/key/" target="_blank" class="api-key-hint">(Find my API Key)</a>
@@ -97,8 +97,8 @@
             <input type="password" id="apiKeyInput" placeholder="Your Pexels API Key">
         </div>
         <div>
-            <label for="collectionIdInput">Collection ID:</label>
-            <input type="text" id="collectionIdInput" placeholder="e.g., vmnecek or mfn6mfj">
+            <label for="collectionUrlInput">Pexels Collection URL:</label>
+            <input type="text" id="collectionUrlInput" placeholder="e.g., https://www.pexels.com/collections/pollinators-2r9xsvp/">
         </div>
         <button id="startButton">Start Slideshow</button>
         <p id="input-error" style="color:red; margin-top:10px;"></p>
@@ -116,7 +116,7 @@
         const statusOverlay = document.getElementById("status-overlay");
         const inputContainer = document.getElementById("input-container");
         const apiKeyInput = document.getElementById("apiKeyInput");
-        const collectionIdInput = document.getElementById("collectionIdInput");
+        const collectionUrlInput = document.getElementById("collectionUrlInput"); // Changed ID
         const startButton = document.getElementById("startButton");
         const inputError = document.getElementById("input-error");
 
@@ -142,7 +142,35 @@
             return null;
         }
 
-        // --- Slideshow Logic (mostly unchanged) ---
+        // --- NEW: Function to extract Collection ID from URL ---
+        function extractCollectionIdFromUrl(url) {
+            try {
+                const parsedUrl = new URL(url);
+                if (parsedUrl.hostname !== 'www.pexels.com' && parsedUrl.hostname !== 'pexels.com') {
+                    return null; 
+                }
+                const pathSegments = parsedUrl.pathname.split('/').filter(segment => segment.length > 0);
+                // Expected format: /collections/[slug-id]/
+                if (pathSegments.length < 2 || pathSegments[0] !== 'collections') {
+                    return null;
+                }
+                const slugWithId = pathSegments[1];
+                const idParts = slugWithId.split('-');
+                if (idParts.length < 2) return null; // slug must contain at least one hyphen before the id
+                
+                const potentialId = idParts.pop();
+                // Basic check if ID looks like a Pexels ID (alphanumeric, often 6-7 chars)
+                if (/^[a-zA-Z0-9]+$/.test(potentialId)) {
+                    return potentialId;
+                }
+                return null;
+            } catch (e) {
+                console.error("Invalid URL for Collection ID extraction:", e);
+                return null;
+            }
+        }
+
+        // --- Slideshow Logic ---
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -152,11 +180,11 @@
 
         async function fetchPhotosFromPexelsAPI(apiKey, collectionId) {
             statusOverlay.classList.remove("hidden");
-            statusOverlay.textContent = `Fetching photos for collection: ${collectionId}...`;
+            statusOverlay.textContent = `Fetching photos for collection ID: ${collectionId}...`;
             wallpaperElement.alt = `Fetching photos...`;
             let allPhotoUrls = [];
             let nextPageUrl = `${PEXELS_BASE_URL}collections/${collectionId}?type=photos&per_page=${PHOTOS_PER_PAGE}&page=1`;
-            const headers = { "Authorization": apiKey, "User-Agent": "PexelWallpaperDynamic/1.2" }; // Incremented version for User-Agent
+            const headers = { "Authorization": apiKey, "User-Agent": "PexelWallpaperDynamic/1.3" }; 
 
             try {
                 while (nextPageUrl) {
@@ -176,7 +204,7 @@
                     if (nextPageUrl) await new Promise(resolve => setTimeout(resolve, 200));
                 }
                 if (allPhotoUrls.length === 0) {
-                    statusOverlay.textContent = "No photos found for this collection ID or API key/ID is invalid.";
+                    statusOverlay.textContent = "No photos found. Check API key/Collection URL or ensure the collection has photos.";
                     wallpaperElement.alt = "No photos found.";
                 } else {
                     statusOverlay.textContent = `Loaded ${allPhotoUrls.length} photos. Starting slideshow...`;
@@ -196,8 +224,8 @@
             wallpaperElement.src = images[currentIndex];
             wallpaperElement.alt = `Wallpaper ${currentIndex + 1} of ${images.length}`;
             currentIndex = (currentIndex + 1) % images.length;
-            if (currentIndex === 0) { // When list completes
-                 shuffleArray(images); // Re-shuffle for new sequence
+            if (currentIndex === 0) { 
+                 shuffleArray(images); 
             }
         }
 
@@ -210,66 +238,76 @@
                 setWallpaper();
                 setInterval(setWallpaper, changeInterval);
             } else {
-                statusOverlay.textContent += " Please check API key/Collection ID.";
-                // Optionally offer to clear settings and re-show input form
-                statusOverlay.innerHTML += ' <a href=\"#\" onclick=\"clearSettingsAndShowForm(); return false;\">Try again?</a>';
+                statusOverlay.textContent += " Please check API key/Collection details.";
+                statusOverlay.innerHTML += ' <a href="#" onclick="clearSettingsAndShowForm(); return false;">Try again?</a>';
             }
         }
         
-        // New function to clear cookies and show form
         function clearSettingsAndShowForm() {
             setCookie("pexelApiKey", "", -1); 
-            setCookie("pexelCollectionId", "", -1);
+            setCookie("pexelCollectionId", "", -1); // Cookie stores only the ID
             apiKeyInput.value = "";
-            collectionIdInput.value = "";
+            collectionUrlInput.value = ""; // Clear URL input
             inputError.textContent = "";
             inputContainer.classList.remove("hidden");
             statusOverlay.classList.add("hidden");
-            wallpaperElement.alt = "Please configure API Key and Collection ID.";
-            // Stop any existing slideshow interval if one was running
-            // This part is tricky as interval ID is not global. For simplicity, this might be omitted
-            // or a global intervalId variable would be needed.
+            wallpaperElement.alt = "Please configure API Key and Collection URL.";
         }
-
 
         function handleConfiguration() {
             const urlParams = new URLSearchParams(window.location.search);
             let apiKey = urlParams.get('apiKey');
-            let collectionId = urlParams.get('collectionId');
+            let collectionUrlParam = urlParams.get('collectionUrl'); // New: expecting full URL
+            let collectionIdToUse = null;
 
-            if (apiKey && collectionId) {
-                console.log("Using API Key and Collection ID from URL parameters.");
+            if (collectionUrlParam) {
+                collectionIdToUse = extractCollectionIdFromUrl(collectionUrlParam);
+                if (!collectionIdToUse) {
+                    console.warn("Could not extract Collection ID from URL parameter: " + collectionUrlParam);
+                    // Proceed without collection ID from URL, will fall to cookies or input form
+                }
+            }
+
+            if (apiKey && collectionIdToUse) {
+                console.log(`Using API Key from URL and extracted Collection ID: ${collectionIdToUse} from URL.`);
                 setCookie("pexelApiKey", apiKey, 30); 
-                setCookie("pexelCollectionId", collectionId, 30);
-                initializeSlideshow(apiKey, collectionId);
+                setCookie("pexelCollectionId", collectionIdToUse, 30); // Store only the ID
+                initializeSlideshow(apiKey, collectionIdToUse);
             } else {
                 const cookieApiKey = getCookie("pexelApiKey");
-                const cookieCollectionId = getCookie("pexelCollectionId");
+                const cookieCollectionId = getCookie("pexelCollectionId"); // This is already an ID
 
                 if (cookieApiKey && cookieCollectionId) {
-                    console.log("Using API Key and Collection ID from cookies.");
+                    console.log(`Using API Key and Collection ID (${cookieCollectionId}) from cookies.`);
                     initializeSlideshow(cookieApiKey, cookieCollectionId);
                 } else {
-                    console.log("No API Key/Collection ID found in URL or cookies. Showing input form.");
+                    console.log("No valid API Key/Collection info found in URL or cookies. Showing input form.");
                     inputContainer.classList.remove("hidden");
                     statusOverlay.classList.add("hidden"); 
-                    wallpaperElement.alt = "Please configure API Key and Collection ID.";
+                    wallpaperElement.alt = "Please configure API Key and Collection URL.";
                 }
             }
         }
 
         startButton.addEventListener('click', () => {
             const apiKey = apiKeyInput.value.trim();
-            const collectionId = collectionIdInput.value.trim();
+            const collectionUrl = collectionUrlInput.value.trim();
             inputError.textContent = "";
 
-            if (!apiKey || !collectionId) {
-                inputError.textContent = "Both API Key and Collection ID are required.";
+            if (!apiKey || !collectionUrl) {
+                inputError.textContent = "Both API Key and Collection URL are required.";
                 return;
             }
-            console.log("Using API Key and Collection ID from input form.");
+
+            const collectionId = extractCollectionIdFromUrl(collectionUrl);
+            if (!collectionId) {
+                inputError.textContent = "Invalid Pexels Collection URL or ID could not be extracted.";
+                return;
+            }
+
+            console.log(`Using API Key from input and extracted Collection ID: ${collectionId}`);
             setCookie("pexelApiKey", apiKey, 30);
-            setCookie("pexelCollectionId", collectionId, 30);
+            setCookie("pexelCollectionId", collectionId, 30); // Store only the ID
             initializeSlideshow(apiKey, collectionId);
         });
 
