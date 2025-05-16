@@ -163,6 +163,12 @@
             pointer-events: auto; /* Make button clickable */
         }
     </style>
+    <!-- Include these tags in your <head> -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0066ff">
 </head>
 <body>
     <div id="status-overlay" class="hidden">Loading...</div>
@@ -191,7 +197,7 @@
         </div>
         <button id="startButton">Apply Settings & Start Slideshow</button>
         <p id="input-error" style="color:red; margin-top:15px;"></p>
-        <div id="userAgentDisplay" style="margin-top: 15px; font-size: 0.8em; color: #555; word-break: break-all;"></div>
+        
     </div>
     <div id="settingsHoverTrigger"></div>
 
@@ -533,7 +539,6 @@
             inputContainer.classList.remove("hidden");
             statusOverlay.classList.add("hidden");
             wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
-            document.getElementById('userAgentDisplay').textContent = `User Agent: ${navigator.userAgent}`;
             document.addEventListener('keydown', handleEscKey); // Add ESC listener
         }
 
