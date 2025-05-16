@@ -46,11 +46,52 @@
             line-height: 40px;
             text-align: center;
             cursor: pointer;
-            opacity: 0.4; /* Reverted: semi-transparent by default */
+            opacity: 0; /* Reverted: semi-transparent by default */
             transition: opacity 0.3s ease;
         }
         #settingsButton:hover { /* Re-added direct hover effect */
             opacity: 1;
+        }
+        #closeFormButton { /* New: Style for the close button on the form */
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+        #closeFormButton:hover {
+            color: #333;
+        }
+        .plash-button {
+            display: inline-block;
+            padding: 8px 15px;
+            margin-bottom: 15px; /* Space before the input fields */
+            background-color: #007aff; /* Apple blue */
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 0.9em;
+            text-align: center;
+            transition: background-color 0.2s ease;
+        }
+        .plash-button:hover {
+            background-color: #005ecb;
+            color: white;
+        }
+        #input-container ol {
+            text-align: left;
+            margin-left: 20px; /* Indent list a bit */
+            margin-bottom: 20px; /* Space before API key input */
+            padding-left: 20px; /* Space for list numbers */
+        }
+        #input-container ol li {
+            margin-bottom: 10px; /* Space between list items */
+            line-height: 1.4;
         }
         #input-container {
             position: fixed;
@@ -69,11 +110,6 @@
             margin-top: 0;
             margin-bottom: 15px;
             color: #333;
-        }
-        #input-container p {
-            margin-bottom: 20px;
-            font-size: 0.95em;
-            color: #555;
         }
         #input-container label {
             display: block;
@@ -112,36 +148,6 @@
         }
         .hidden {
             display: none !important;
-        }
-        #status-overlay {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background-color: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 14px;
-            z-index: 1000;
-        }
-        #settingsButton { /* New Settings Button */
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            z-index: 999; /* Below status overlay and input form, but above wallpaper */
-            background-color: rgba(50, 50, 50, 0.7);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-            line-height: 40px;
-            text-align: center;
-            cursor: pointer;
-            opacity: 0; /* Default: completely invisible */
-            transition: opacity 0.3s ease;
-            pointer-events: none; /* Button is not clickable when invisible */
         }
         #settingsHoverTrigger { /* New: Invisible area to trigger button visibility */
             position: fixed;
@@ -156,67 +162,6 @@
             opacity: 1;
             pointer-events: auto; /* Make button clickable */
         }
-        #input-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(255,255,255,0.95);
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
-            z-index: 1001;
-            text-align: center;
-            min-width: 350px; 
-        }
-        #input-container h2 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        #input-container p {
-            margin-bottom: 20px;
-            font-size: 0.95em;
-            color: #555;
-        }
-        #input-container label {
-            display: block;
-            margin-top: 15px;
-            text-align: left;
-            font-weight: bold;
-            color: #444;
-            font-size: 0.9em;
-        }
-        #input-container input[type="text"],
-        #input-container input[type="password"] {
-            width: calc(100% - 22px); 
-            padding: 10px;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        #input-container button {
-            margin-top: 25px;
-            padding: 12px 25px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-        }
-        #input-container button:hover {
-            background-color: #0056b3;
-        }
-        .api-key-hint { 
-            font-size: 0.8em;
-            font-weight: normal;
-            margin-left: 5px;
-        }
-        .hidden {
-            display: none !important;
-        }
     </style>
 </head>
 <body>
@@ -225,8 +170,14 @@
     <button id="settingsButton" title="Change API Key or Collection">⚙️</button>
 
     <div id="input-container" class="hidden">
-        <h2>Pexels API Configuration</h2>
-        <p>Modify your Pexels API Key or Collection URL below.</p>
+        <span id="closeFormButton" title="Close settings">&times;</span>
+        <h2>Pexels Wallpapers</h2>
+        <ol>
+            <li>Installeer Plash: <a href="https://apps.apple.com/us/app/plash/id1494023538?mt=12" target="_blank" class="plash-button" style="margin-left: 5px; margin-bottom: 5px; padding: 5px 10px; font-size: 0.85em;">Open Plash in App Store</a></li>
+            <li>Voeg in Plash bij 'Websites' deze URL toe: <code>https://geert.github.io/pexel-wallpaper/</code></li>
+            <li>Vul hieronder je Pexels API key in.</li>
+            <li>Plak hieronder de URL van een Pexels Collection waaruit je wallpapers gekozen worden.</li>
+        </ol>
         <div>
             <label for="apiKeyInput">Pexels API Key:
                 <a href="https://www.pexels.com/api/key/" target="_blank" class="api-key-hint">(Find my API Key)</a>
@@ -237,30 +188,190 @@
             <label for="collectionUrlInput">Pexels Collection URL:</label>
             <input type="text" id="collectionUrlInput" placeholder="e.g., https://www.pexels.com/collections/pollinators-2r9xsvp/">
         </div>
-        <button id="startButton">Start Slideshow</button>
+        <button id="startButton">Apply Settings & Start Slideshow</button>
         <p id="input-error" style="color:red; margin-top:15px;"></p>
     </div>
     <div id="settingsHoverTrigger"></div>
-    <button id="settingsButton" title="Change API Key or Collection">⚙️</button>
-
-    <div id="input-container" class="hidden">
-        <h2>Pexels API Configuration</h2>
-        <p>Modify your Pexels API Key or Collection URL below.</p>
-        <div>
-            <label for="apiKeyInput">Pexels API Key:
-                <a href="https://www.pexels.com/api/key/" target="_blank" class="api-key-hint">(Find my API Key)</a>
-            </label>
-            <input type="password" id="apiKeyInput" placeholder="Your Pexels API Key">
-        </div>
-        <div>
-            <label for="collectionUrlInput">Pexels Collection URL:</label>
-            <input type="text" id="collectionUrlInput" placeholder="e.g., https://www.pexels.com/collections/pollinators-2r9xsvp/">
-        </div>
-        <button id="startButton">Start Slideshow</button>
-        <p id="input-error" style="color:red; margin-top:15px;"></p>
-    </div>
 
     <script>
+        const translations = {
+            "us": { // Default: US English
+                "settingsButtonTitle": "Change API Key or Collection",
+                "closeFormButtonTitle": "Close settings",
+                "formTitle": "Pexels Wallpapers",
+                "instruction1": "Install Plash: ",
+                "plashButtonText": "Open Plash in App Store",
+                "instruction2_1": "In Plash, under 'Websites', add this URL: ",
+                "instruction3": "Enter your Pexels API key below.",
+                "instruction4": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen.",
+                "apiKeyLabel": "Pexels API Key:",
+                "findApiKeyLink": "(Find my API Key)",
+                "apiKeyPlaceholder": "Your Pexels API Key",
+                "collectionUrlLabel": "Pexels Collection URL:",
+                "collectionUrlPlaceholder": "e.g., https://www.pexels.com/collections/pollinators-2r9xsvp/",
+                "startButtonText": "Apply Settings & Start Slideshow",
+                "errorBothRequired": "Both API Key and Collection URL are required.",
+                "errorInvalidPexelsUrl": "Invalid Pexels Collection URL or ID could not be extracted.",
+                "wallpaperAltLoading": "Loading wallpaper...",
+                "wallpaperAltFetching": "Fetching photos...",
+                "wallpaperAltWallpaper": "Wallpaper",
+                "wallpaperAltOf": "of",
+                "wallpaperAltConfigure": "Configure API Key and Collection URL.",
+                "statusLoading": "Loading...",
+                "statusNoPhotosFound": "No photos found in this collection or invalid API Key/Collection ID.",
+                "statusCheckDetails": " Please check API key/Collection details.",
+                "statusTryAgain": "Try again?",
+                "slideshowPaused": "Slideshow paused.",
+                "slideshowResumed": "Slideshow resumed."
+            },
+            "nl": {
+                "settingsButtonTitle": "Wijzig API-sleutel of collectie",
+                "closeFormButtonTitle": "Instellingen sluiten",
+                "formTitle": "Pexels Achtergronden",
+                "instruction1": "Installeer Plash: ",
+                "plashButtonText": "Open Plash in App Store",
+                "instruction2_1": "Voeg in Plash bij 'Websites' deze URL toe: ",
+                "instruction3": "Vul hieronder je Pexels API-sleutel in.",
+                "instruction4": "Plak hieronder de URL van een Pexels Collectie waaruit je achtergronden gekozen worden.",
+                "apiKeyLabel": "Pexels API-sleutel:",
+                "findApiKeyLink": "(Vind mijn API-sleutel)",
+                "apiKeyPlaceholder": "Uw Pexels API-sleutel",
+                "collectionUrlLabel": "Pexels Collectie URL:",
+                "collectionUrlPlaceholder": "bijv. https://www.pexels.com/collections/pollinators-2r9xsvp/",
+                "startButtonText": "Instellingen toepassen & start diavoorstelling",
+                "errorBothRequired": "Zowel API-sleutel als Collectie URL zijn vereist.",
+                "errorInvalidPexelsUrl": "Ongeldige Pexels Collectie URL of ID kon niet worden geëxtraheerd.",
+                "wallpaperAltLoading": "Achtergrond laden...",
+                "wallpaperAltFetching": "Foto's ophalen...",
+                "wallpaperAltWallpaper": "Achtergrond",
+                "wallpaperAltOf": "van",
+                "wallpaperAltConfigure": "Configureer API-sleutel en Collectie URL.",
+                "statusLoading": "Laden...",
+                "statusNoPhotosFound": "Geen foto's gevonden in deze collectie of ongeldige API-sleutel/Collectie ID.",
+                "statusCheckDetails": " Controleer API-sleutel/Collectie details.",
+                "statusTryAgain": "Opnieuw proberen?",
+                "slideshowPaused": "Diavoorstelling gepauzeerd.",
+                "slideshowResumed": "Diavoorstelling hervat."
+            },
+            "de": {
+                "settingsButtonTitle": "API-Schlüssel oder Sammlung ändern",
+                "closeFormButtonTitle": "Einstellungen schließen",
+                "formTitle": "Pexels Hintergrundbilder",
+                "instruction1": "Installieren Sie Plash: ",
+                "plashButtonText": "Plash im App Store öffnen",
+                "instruction2_1": "Fügen Sie in Plash unter 'Websites' diese URL hinzu: ",
+                "instruction3": "Geben Sie unten Ihren Pexels API-Schlüssel ein.",
+                "instruction4": "Fügen Sie unten die URL einer Pexels-Sammlung ein, aus der Ihre Hintergrundbilder ausgewählt werden.",
+                "apiKeyLabel": "Pexels API-Schlüssel:",
+                "findApiKeyLink": "(Meinen API-Schlüssel finden)",
+                "apiKeyPlaceholder": "Ihr Pexels API-Schlüssel",
+                "collectionUrlLabel": "Pexels Sammlung URL:",
+                "collectionUrlPlaceholder": "z.B. https://www.pexels.com/collections/pollinators-2r9xsvp/",
+                "startButtonText": "Einstellungen anwenden & Diashow starten",
+                "errorBothRequired": "Sowohl API-Schlüssel als auch Sammlungs-URL sind erforderlich.",
+                "errorInvalidPexelsUrl": "Ungültige Pexels Sammlungs-URL oder ID konnte nicht extrahiert werden.",
+                "wallpaperAltLoading": "Hintergrundbild wird geladen...",
+                "wallpaperAltFetching": "Fotos werden abgerufen...",
+                "wallpaperAltWallpaper": "Hintergrundbild",
+                "wallpaperAltOf": "von",
+                "wallpaperAltConfigure": "API-Schlüssel und Sammlungs-URL konfigurieren.",
+                "statusLoading": "Laden...",
+                "statusNoPhotosFound": "Keine Fotos in dieser Sammlung gefunden oder ungültiger API-Schlüssel/Sammlungs-ID.",
+                "statusCheckDetails": " Bitte überprüfen Sie API-Schlüssel/Sammlungsdetails.",
+                "statusTryAgain": "Erneut versuchen?",
+                "slideshowPaused": "Diashow angehalten.",
+                "slideshowResumed": "Diashow fortgesetzt."
+            },
+            "fr": {
+                "settingsButtonTitle": "Modifier la clé API ou la collection",
+                "closeFormButtonTitle": "Fermer les paramètres",
+                "formTitle": "Fonds d'écran Pexels",
+                "instruction1": "Installez Plash : ",
+                "plashButtonText": "Ouvrir Plash dans l'App Store",
+                "instruction2_1": "Dans Plash, sous 'Sites Web', ajoutez cette URL : ",
+                "instruction3": "Entrez votre clé API Pexels ci-dessous.",
+                "instruction4": "Collez ci-dessous l'URL d'une collection Pexels à partir de laquelle vos fonds d'écran seront choisis.",
+                "apiKeyLabel": "Clé API Pexels :",
+                "findApiKeyLink": "(Trouver ma clé API)",
+                "apiKeyPlaceholder": "Votre clé API Pexels",
+                "collectionUrlLabel": "URL de la collection Pexels :",
+                "collectionUrlPlaceholder": "par ex. https://www.pexels.com/collections/pollinators-2r9xsvp/",
+                "startButtonText": "Appliquer les paramètres et démarrer le diaporama",
+                "errorBothRequired": "La clé API et l'URL de la collection sont toutes deux requises.",
+                "errorInvalidPexelsUrl": "URL de collection Pexels non valide ou ID non extractible.",
+                "wallpaperAltLoading": "Chargement du fond d'écran...",
+                "wallpaperAltFetching": "Récupération des photos...",
+                "wallpaperAltWallpaper": "Fond d'écran",
+                "wallpaperAltOf": "de",
+                "wallpaperAltConfigure": "Configurer la clé API et l'URL de la collection.",
+                "statusLoading": "Chargement...",
+                "statusNoPhotosFound": "Aucune photo trouvée dans cette collection ou clé API/ID de collection non valide.",
+                "statusCheckDetails": " Veuillez vérifier les détails de la clé API/collection.",
+                "statusTryAgain": "Réessayer ?",
+                "slideshowPaused": "Diaporama en pause.",
+                "slideshowResumed": "Diaporama repris."
+            }
+        };
+
+        let currentLang = "us"; // Default language key
+        let currentTranslations = translations.us; // Default translations object
+
+        function getBrowserLanguage() {
+            const lang = navigator.language || navigator.userLanguage; // e.g., "en-US", "nl-NL"
+            if (lang) {
+                const primaryLang = lang.split('-')[0].toLowerCase(); // e.g., "en", "nl"
+                if (primaryLang === "en") return "us"; // Map general English to "us"
+                return primaryLang; // "nl", "de", "fr"
+            }
+            return "us"; // Fallback
+        }
+
+        function setLanguage() {
+            const browserLangKey = getBrowserLanguage();
+            if (translations[browserLangKey]) {
+                currentLang = browserLangKey;
+                currentTranslations = translations[browserLangKey];
+            } else {
+                currentLang = "us"; // Fallback to default if detected lang not in our translations
+                currentTranslations = translations.us;
+            }
+            translatePage();
+        }
+
+        function translatePage() {
+            document.title = currentTranslations.formTitle; // Update page title as well
+            document.getElementById('settingsButton').title = currentTranslations.settingsButtonTitle;
+            document.getElementById('closeFormButton').title = currentTranslations.closeFormButtonTitle;
+
+            const inputContainer = document.getElementById('input-container');
+            inputContainer.querySelector('h2').textContent = currentTranslations.formTitle;
+            
+            const ol = inputContainer.querySelector('ol');
+            ol.children[0].childNodes[0].nodeValue = currentTranslations.instruction1;
+            ol.children[0].querySelector('.plash-button').textContent = currentTranslations.plashButtonText;
+            ol.children[1].childNodes[0].nodeValue = currentTranslations.instruction2_1; 
+            // The <code>https://geert.github.io/pexel-wallpaper/</code> part remains as is.
+            ol.children[2].textContent = currentTranslations.instruction3;
+            ol.children[3].textContent = currentTranslations.instruction4;
+
+            inputContainer.querySelector('label[for="apiKeyInput"]').childNodes[0].nodeValue = currentTranslations.apiKeyLabel;
+            inputContainer.querySelector('label[for="apiKeyInput"] .api-key-hint').textContent = currentTranslations.findApiKeyLink;
+            document.getElementById('apiKeyInput').placeholder = currentTranslations.apiKeyPlaceholder;
+            
+            inputContainer.querySelector('label[for="collectionUrlInput"]').textContent = currentTranslations.collectionUrlLabel;
+            document.getElementById('collectionUrlInput').placeholder = currentTranslations.collectionUrlPlaceholder;
+            
+            document.getElementById('startButton').textContent = currentTranslations.startButtonText;
+
+            // Update alt texts for initial state if wallpaper is already trying to load
+            if (wallpaperElement.alt.includes("Loading") || wallpaperElement.alt.includes("Laden")) {
+                 wallpaperElement.alt = currentTranslations.wallpaperAltLoading;
+            }
+             if (statusOverlay.textContent.includes("Loading") || statusOverlay.textContent.includes("Laden")) {
+                statusOverlay.textContent = currentTranslations.statusLoading;
+            }
+        }
+
         const changeInterval = 300000; // 5 minutes
         const PHOTO_SIZE_TO_DISPLAY = "original";
         const PEXELS_BASE_URL = "https://api.pexels.com/v1/";
@@ -278,6 +389,7 @@
         const collectionUrlInput = document.getElementById("collectionUrlInput");
         const startButton = document.getElementById("startButton");
         const inputError = document.getElementById("input-error");
+        const closeFormButton = document.getElementById("closeFormButton"); // New: close button
 
         // --- Cookie Helper Functions ---
         function setCookie(name, value, days) {
@@ -327,8 +439,9 @@
 
         async function fetchPhotosFromPexelsAPI(apiKey, collectionId) {
             statusOverlay.classList.remove("hidden");
-            statusOverlay.textContent = `Fetching photos for collection ID: ${collectionId}...`;
-            wallpaperElement.alt = `Fetching photos...`;
+            statusOverlay.textContent = currentTranslations.statusLoading;
+            wallpaperElement.src = ""; // Clear previous image
+            wallpaperElement.alt = currentTranslations.wallpaperAltFetching;
             let allPhotoUrls = [];
             let nextPageUrl = `${PEXELS_BASE_URL}collections/${collectionId}?type=photos&per_page=${PHOTOS_PER_PAGE}&page=1`;
             const headers = { "Authorization": apiKey, "User-Agent": "PexelWallpaperDynamic/1.4" }; 
@@ -351,17 +464,17 @@
                     if (nextPageUrl) await new Promise(resolve => setTimeout(resolve, 200));
                 }
                 if (allPhotoUrls.length === 0) {
-                    statusOverlay.textContent = "No photos found. Check API key/Collection URL or ensure the collection has photos.";
-                    wallpaperElement.alt = "No photos found.";
+                    statusOverlay.textContent = currentTranslations.statusNoPhotosFound;
+                    wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
                 } else {
-                    statusOverlay.textContent = `Loaded ${allPhotoUrls.length} photos. Starting slideshow...`;
+                    statusOverlay.textContent = `${currentTranslations.statusLoading} ${allPhotoUrls.length} ${currentTranslations.wallpaperAltWallpaper}. ${currentTranslations.statusLoading} ${currentTranslations.slideshowResumed}...`;
                     setTimeout(() => { statusOverlay.classList.add("hidden"); }, 3000);
                 }
                 return allPhotoUrls;
             } catch (error) {
                 console.error("Error fetching Pexels photos:", error);
-                statusOverlay.textContent = `API Error: ${error.message}. Check console.`;
-                wallpaperElement.alt = `Error: ${error.message}`;
+                statusOverlay.textContent = `${currentTranslations.statusNoPhotosFound}. ${currentTranslations.statusCheckDetails} ${error.message}.`;
+                wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
                 return [];
             }
         }
@@ -369,22 +482,42 @@
         function setWallpaper() {
             if (images.length === 0) return;
             wallpaperElement.src = images[currentIndex];
-            wallpaperElement.alt = `Wallpaper ${currentIndex + 1} of ${images.length}`;
+            wallpaperElement.alt = `${currentTranslations.wallpaperAltWallpaper} ${currentIndex + 1} ${currentTranslations.wallpaperAltOf} ${images.length}`;
             currentIndex = (currentIndex + 1) % images.length;
-            if (currentIndex === 0) shuffleArray(images); 
+            if (currentIndex === 0) { 
+                shuffleArray(images); 
+            }
         }
         
         function showSettingsForm() {
             if (slideshowIntervalId) {
                 clearInterval(slideshowIntervalId);
                 slideshowIntervalId = null;
+                console.log(currentTranslations.slideshowPaused);
             }
             apiKeyInput.value = getCookie("pexelApiKey") || "";
             collectionUrlInput.value = getCookie("lastPexelCollectionUrl") || "";
             inputError.textContent = "";
             inputContainer.classList.remove("hidden");
             statusOverlay.classList.add("hidden");
-            wallpaperElement.alt = "Configure API Key and Collection URL."; // Or keep current image
+            wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
+            document.addEventListener('keydown', handleEscKey); // Add ESC listener
+        }
+
+        function hideSettingsForm() { // New: Function to hide the form and resume slideshow
+            inputContainer.classList.add("hidden");
+            document.removeEventListener('keydown', handleEscKey); // Remove ESC listener
+            // Resume slideshow if it was paused by showSettingsForm and images are loaded
+            if (images.length > 0 && !slideshowIntervalId) { 
+                slideshowIntervalId = setInterval(setWallpaper, changeInterval);
+                console.log(currentTranslations.slideshowResumed);
+            }
+        }
+
+        function handleEscKey(event) { // New: Handler for ESC key
+            if (event.key === "Escape" && !inputContainer.classList.contains("hidden")) {
+                hideSettingsForm();
+            }
         }
 
         async function initializeSlideshow(apiKey, collectionId, collectionFullUrl) {
@@ -402,8 +535,8 @@
                 setWallpaper();
                 slideshowIntervalId = setInterval(setWallpaper, changeInterval);
             } else {
-                statusOverlay.textContent += " Please check API key/Collection details.";
-                statusOverlay.innerHTML += ' <a href="#" onclick="clearSettingsAndShowForm(); return false;">Try again?</a>';
+                statusOverlay.textContent = `${currentTranslations.statusNoPhotosFound}. ${currentTranslations.statusCheckDetails}`;
+                statusOverlay.innerHTML += ` <a href="#" onclick="clearSettingsAndShowForm(); return false;">${currentTranslations.statusTryAgain}</a>`;
                  // Do not hide settingsButton here, allow user to retry.
             }
         }
@@ -450,12 +583,14 @@
                     initializeSlideshow(cookieApiKey, cookieCollectionId, getCookie("lastPexelCollectionUrl"));
                 } else {
                     console.log("No valid API Key/Collection info found. Showing input form by default.");
+                    wallpaperElement.alt = currentTranslations.wallpaperAltConfigure; // Update alt text
                     showSettingsForm(); // Show form instead of just making it visible
                 }
             }
         }
 
-        settingsButton.addEventListener('click', showSettingsForm);
+        settingsButton.addEventListener('click', showSettingsForm); // Existing listener
+        closeFormButton.addEventListener('click', hideSettingsForm); // New: Listener for close button
 
         startButton.addEventListener('click', () => {
             const apiKey = apiKeyInput.value.trim();
@@ -463,13 +598,13 @@
             inputError.textContent = "";
 
             if (!apiKey || !collectionUrl) {
-                inputError.textContent = "Both API Key and Collection URL are required.";
+                inputError.textContent = currentTranslations.errorBothRequired;
                 return;
             }
 
             const collectionId = extractCollectionIdFromUrl(collectionUrl);
             if (!collectionId) {
-                inputError.textContent = "Invalid Pexels Collection URL or ID could not be extracted.";
+                inputError.textContent = currentTranslations.errorInvalidPexelsUrl;
                 return;
             }
 
@@ -481,7 +616,10 @@
             initializeSlideshow(apiKey, collectionId, collectionUrl);
         });
 
-        document.addEventListener('DOMContentLoaded', handleConfiguration);
+        document.addEventListener('DOMContentLoaded', () => {
+            setLanguage(); // Set language first
+            handleConfiguration(); // Then handle configuration which might show UI
+        });
     </script>
 </body>
 </html>
