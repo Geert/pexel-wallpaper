@@ -63,17 +63,6 @@
             z-index: 998;
             /* background-color: rgba(0,255,0,0.05); /* For debugging the hover area */
         }
-        #settingsHoverTrigger:hover ~ #settingsButton {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
-            background-color: rgba(30, 30, 30, 0.95);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255,255,255,0.7);
-        }
-        #settingsHoverTrigger:hover ~ #settingsButtonLabel {
-            opacity: 1;
-            visibility: visible;
-        }
         #settingsButtonLabel {
             position: fixed;
             top: 22px;
@@ -732,6 +721,53 @@
         document.addEventListener('DOMContentLoaded', () => {
             setLanguage(); 
             handleConfiguration(); 
+
+            // --- JavaScript voor muis inactiviteit detectie ---
+            let inactivityMouseTimer;
+            const settingsButtonForTimer = document.getElementById('settingsButton'); 
+            const settingsButtonLabelForTimer = document.getElementById('settingsButtonLabel');
+            const hoverTriggerForTimer = document.getElementById('settingsHoverTrigger');
+
+            const showButtonAndLabelWithFeedback = () => {
+                if (settingsButtonForTimer && settingsButtonLabelForTimer) {
+                    settingsButtonForTimer.style.opacity = '1';
+                    settingsButtonForTimer.style.visibility = 'visible';
+                    settingsButtonForTimer.style.pointerEvents = 'auto';
+                    settingsButtonForTimer.style.backgroundColor = 'rgba(30, 30, 30, 0.95)'; // Zichtbare staat achtergrond
+                    settingsButtonForTimer.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255,255,255,0.7)'; // Zichtbare staat schaduw
+
+                    settingsButtonLabelForTimer.style.opacity = '1';
+                    settingsButtonLabelForTimer.style.visibility = 'visible';
+                }
+            };
+
+            const hideButtonAndLabelAfterInactivity = () => {
+                if (settingsButtonForTimer && settingsButtonLabelForTimer) {
+                    settingsButtonForTimer.style.opacity = '0';
+                    settingsButtonForTimer.style.visibility = 'hidden';
+                    settingsButtonForTimer.style.pointerEvents = 'none';
+                    // Reset naar basis CSS waarden voor soepele transitie bij verbergen
+                    settingsButtonForTimer.style.backgroundColor = 'rgba(50, 50, 50, 0.7)'; // Basis achtergrond van CSS
+                    settingsButtonForTimer.style.boxShadow = 'none'; // Basis schaduw (geen)
+
+                    settingsButtonLabelForTimer.style.opacity = '0';
+                    settingsButtonLabelForTimer.style.visibility = 'hidden';
+                }
+            };
+
+            const resetMouseInactivityTimer = () => {
+                clearTimeout(inactivityMouseTimer);
+                showButtonAndLabelWithFeedback();
+                inactivityMouseTimer = setTimeout(hideButtonAndLabelAfterInactivity, 5000); 
+            };
+
+            if (hoverTriggerForTimer) {
+                hoverTriggerForTimer.addEventListener('mousemove', resetMouseInactivityTimer);
+                // Knop en label zijn initieel verborgen door CSS, dus geen actie hier nodig bij laden.
+            } else {
+                console.warn('Element settingsHoverTrigger niet gevonden. Muis inactiviteit feature is uitgeschakeld.');
+            }
+            // --- Einde JavaScript voor muis inactiviteit ---
         });
     </script>
 </body>
