@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pexel Wallpaper (Dynamic)</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000; /* Black background for when images are loading or if one fails */
+        }
+        #wallpaper {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Cover the whole screen, may crop a bit */
+            /* Use "contain" if you prefer to see the whole image, possibly with letterboxing: */
+            /* object-fit: contain; */
+            display: block;
+        }
+        #status-overlay { /* Added for user feedback */
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: sans-serif;
+            font-size: 14px;
+            z-index: 1000; /* Ensure it's on top */
+        }
+    </style>
+</head>
+<body>
+    <!-- Status overlay for user feedback -->
+    <div id="status-overlay">Loading...</div>
+    <img id="wallpaper" src="" alt="Loading wallpaper...">
+
+    <script>
+        // --- Configuration from original index.html (can be adjusted) ---
+        const changeInterval = 300000; // Change image every 5 minutes (300,000 milliseconds)
+        // --- Pexels API specific configuration ---
+        const PHOTO_SIZE_TO_DISPLAY = "original"; // Pexels API photo size (original, large2x, large, medium, etc.)
+        const PEXELS_BASE_URL = "https://api.pexels.com/v1/";
+        const PHOTOS_PER_PAGE = 80; // Max allowed by Pexels for collections
+
+        // --- Variables from original index.html ---
+        let images = [];
+        let currentIndex = 0;
+        const wallpaperElement = document.getElementById("wallpaper");
+        const statusOverlay = document.getElementById("status-overlay"); // Get the new status element
+
+
+        // Function to shuffle an array (Fisher-Yates shuffle) - from original index.html
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // NEW: Adapted function to fetch images directly from Pexels API
+        async function fetchPhotosFromPexelsAPI(apiKey, collectionId) {
+            if (!apiKey || !collectionId) {
+                wallpaperElement.alt = "API Key and Collection ID are required parameters.";
+                statusOverlay.textContent = "Error: API Key and Collection ID are required in the URL (e.g., index2.html?apiKey=YOUR_KEY&collectionId=YOUR_ID).";
+                return [];
+            }
+
+            statusOverlay.textContent = `Fetching photos for collection: ${collectionId}...`;
+            let allPhotoUrls = [];
+            // Initial URL for the first page
+            let nextPageUrl = `${PEXELS_BASE_URL}collections/${collectionId}?type=photos&per_page=${PHOTOS_PER_PAGE}&page=1`;
+
+            const headers = {
+                "Authorization": apiKey,
+                "User-Agent": "PexelWallpaperDynamic/1.0" // Good practice to set a User-Agent
+            };
+
+            try {
+                while (nextPageUrl) {
+                    console.log("Fetching from Pexels API URL:", nextPageUrl);
+                    const response = await fetch(nextPageUrl, { headers });
+
+                    if (!response.ok) {
+                        // Try to get error message from Pexels API response body
+                        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+                        throw new Error(`Pexels API error: ${response.status} - ${errorData.error || errorData.message || 'Unknown error'}`);
+                    }
+
+                    const data = await response.json();
+                    const mediaItems = data.media || []; // Pexels uses 'media' for collection items
+                    
+                    mediaItems.forEach(photo => {
+                        if (photo.type === "Photo" && photo.src && photo.src[PHOTO_SIZE_TO_DISPLAY]) {
+                            allPhotoUrls.push(photo.src[PHOTO_SIZE_TO_DISPLAY]);
+                        }
+                    });
+
+                    nextPageUrl = data.next_page || null; // Pexels provides 'next_page' for pagination
+                    // Optional: add a small delay to respect rate limits if fetching many pages quickly
+                    if (nextPageUrl) await new Promise(resolve => setTimeout(resolve, 200)); 
+                }
+                
+                if (allPhotoUrls.length === 0) {
+                     wallpaperElement.alt = "No photos found in this collection or collection ID is invalid.";
+                     statusOverlay.textContent = "No photos found for this collection ID.";
+                } else {
+                    statusOverlay.textContent = `Loaded ${allPhotoUrls.length} photos. Starting slideshow...`;
+                    // Optionally hide status overlay after a few seconds if successful
+                    setTimeout(() => { statusOverlay.style.display = 'none'; }, 3000);
+                }
+                return allPhotoUrls;
+
+            } catch (error) {
+                console.error("Error fetching Pexels photos:", error);
+                wallpaperElement.alt = `Error: ${error.message}`;
+                statusOverlay.textContent = `API Error: ${error.message}. Check console for details.`;
+                return [];
+            }
+        }
+
+        // Function to set wallpaper - from original index.html, slightly adapted
+        function setWallpaper() {
+            if (images.length === 0) {
+                // Status messages are handled by fetchPhotosFromPexelsAPI in case of error or no images
+                return;
+            }
+            
+            wallpaperElement.src = images[currentIndex];
+            // Update alt text for accessibility / info
+            wallpaperElement.alt = `Wallpaper ${currentIndex + 1} of ${images.length} from collection`; 
+            
+            currentIndex++;
+            if (currentIndex >= images.length) {
+                currentIndex = 0; // Loop back to the beginning
+                shuffleArray(images); // Re-shuffle when the list completes for variety
+            }
+        }
+
+        // Main execution block: NEW async function to handle URL params and start
+        async function startDynamicSlideshow() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const apiKey = urlParams.get('apiKey');
+            const collectionId = urlParams.get('collectionId');
+
+            // Fetch images using the new function
+            images = await fetchPhotosFromPexelsAPI(apiKey, collectionId);
+
+            if (images.length > 0) {
+                shuffleArray(images); // Shuffle the images initially
+                setWallpaper(); // Set the first wallpaper
+                setInterval(setWallpaper, changeInterval); // Start the interval timer
+            } else {
+                // Error messages are handled within fetchPhotosFromPexelsAPI
+                // and displayed in statusOverlay or wallpaperElement.alt
+                console.log("Slideshow not started due to no images or an error.");
+            }
+        }
+
+        // Start the process when the page loads
+        document.addEventListener('DOMContentLoaded', startDynamicSlideshow);
+    </script>
+</body>
+</html>
