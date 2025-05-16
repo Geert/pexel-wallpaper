@@ -4,7 +4,7 @@ Set your macOS desktop to a dynamic slideshow of beautiful images from your favo
 
 This web application provides the Pexels integration for Plash, allowing you to easily configure and display high-quality wallpapers.
 
-![Live Demo](https://geert.github.io/pexel-wallpaper/)
+[Live Demo](https://geert.github.io/pexel-wallpaper/)
 
 ## How to Use
 
