@@ -331,3 +331,76 @@ Here are some common issues and tips:
 *   **Pexels API Terms Compliance:**
     *   Remember to review Pexels' current API Terms of Service to ensure your use case complies with their guidelines, especially regarding wallpaper applications.
     *   Consider adding proper attribution to Pexels in your slideshow if required by their terms.
+
+# Pexels Dynamic Wallpaper for Plash
+
+Transform your macOS desktop into a dynamic slideshow with stunning, high-quality wallpapers sourced directly from your favorite Pexels collections. This web application is designed to be used with [Plash](https://apps.apple.com/us/app/plash/id1494023538?mt=12), allowing you to set any Pexels collection as a continuously updating wallpaper on your Mac.
+
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=flat-square)](https://geert.github.io/pexel-wallpaper/)
+
+## Features
+
+*   **Dynamic Pexels Collections:** Use any public Pexels collection as your wallpaper source.
+*   **API Key Integration:** Securely use your personal Pexels API key.
+*   **Easy Setup with Plash:** Clear, step-by-step instructions for integration with the Plash app.
+*   **Multi-language Support:** Interface available in English (US), Dutch (NL), German (DE), and French (FR), automatically selected based on browser language.
+*   **Customizable Change Interval:** Wallpapers refresh every 5 minutes (default, can be adjusted in code).
+*   **Fallback Local Slideshow:** If no Pexels API key is configured, a default slideshow can run using a local `pexels_photo_urls.txt` file.
+*   **Responsive Design:** Adapts to different screen sizes (though primarily designed for desktop use via Plash).
+*   **User-Friendly Settings Form:** Easy-to-use form to input your API key and Pexels collection URL.
+*   **Keyboard Shortcut:** Close the settings form using the ESC key.
+*   **Progressive Web App (PWA) Ready:** Includes a manifest file and icons for PWA capabilities.
+
+## How to Use
+
+Setting up your Pexels dynamic wallpaper involves a few simple steps:
+
+1.  **Install Plash:**
+    *   Download and install Plash from the [Mac App Store](https://apps.apple.com/us/app/plash/id1494023538?mt=12).
+2.  **Add this Web App to Plash:**
+    *   Open Plash preferences.
+    *   Under the 'Websites' tab, click the '+' button to add a new website.
+    *   Enter the following URL: `https://geert.github.io/pexel-wallpaper/`
+3.  **Enable Browsing Mode in Plash:**
+    *   In Plash, ensure that 'Browsing Mode' is enabled for the added website. This allows the settings form to be interactive.
+    *   Continue the following steps via the settings form displayed on your desktop (via Plash).
+4.  **Configure Pexels API Key:**
+    *   In the settings form on your desktop, enter your Pexels API key. You can obtain one from the [Pexels API documentation page](https://www.pexels.com/api/key/).
+5.  **Set Pexels Collection URL:**
+    *   Paste the URL of the Pexels collection you want to use. For example: `https://www.pexels.com/collections/wallpapers-vmnecek/`
+6.  **Apply Settings & Start Slideshow:**
+    *   Click the "Apply Settings & Start Slideshow" button.
+
+Your desktop wallpaper will now display images from your chosen Pexels collection, refreshing automatically!
+
+### Using the Fallback Local Slideshow (Optional)
+
+If you prefer not to use the Pexels API or want a simpler setup initially:
+
+1.  Create a file named `pexels_photo_urls.txt` in the `docs/` directory of this project (if you are running it locally) or ensure it's accessible at the same root level as `index.html` if hosted elsewhere.
+2.  Inside `pexels_photo_urls.txt`, add one direct image URL per line. For example:
+    ```
+    https://images.pexels.com/photos/xxxx/pexels-photo-xxxx.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260
+    https://images.pexels.com/photos/yyyy/pexels-photo-yyyy.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260
+    ```
+3.  When you load `https://geert.github.io/pexel-wallpaper/` without a Pexels API key configured, it will attempt to use this local file for the slideshow while still showing the settings form.
+
+## Technology Stack
+
+*   **HTML5**
+*   **CSS3**
+*   **Vanilla JavaScript (ES6+)**
+*   **Pexels API**
+*   **Plash (for macOS integration)**
+
+## SEO Keywords
+
+Pexels wallpaper, dynamic wallpaper, macOS wallpaper, Plash app, Pexels API, live wallpaper, Pexels collection, slideshow wallpaper, Mac desktop background, automated wallpaper, JavaScript Pexels, GitHub Pages Pexels.
+
+## Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/Geert/pexel-wallpaper/issues) if you want to contribute.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file (if it exists, otherwise assume MIT or specify) for details.
