@@ -42,6 +42,7 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.2);
             z-index: 1001;
             text-align: center;
+            min-width: 300px; /* Ensure some base width */
         }
         #input-container h2 {
             margin-top: 0;
@@ -50,10 +51,11 @@
             display: block;
             margin-top: 10px;
             text-align: left;
+            font-weight: bold;
         }
         #input-container input[type="text"],
-        #input-container input[type="password"] { /* Using password for API key for slight obfuscation */
-            width: calc(100% - 22px);
+        #input-container input[type="password"] {
+            width: calc(100% - 22px); /* Account for padding and border */
             padding: 10px;
             margin-top: 5px;
             border: 1px solid #ccc;
@@ -71,6 +73,11 @@
         #input-container button:hover {
             background-color: #0056b3;
         }
+        .api-key-hint { /* Style for the new hint link */
+            font-size: 0.8em;
+            font-weight: normal;
+            margin-left: 5px;
+        }
         .hidden {
             display: none !important;
         }
@@ -84,12 +91,14 @@
         <h2>Pexels API Configuration</h2>
         <p>Please enter your Pexels API Key and Collection ID.</p>
         <div>
-            <label for="apiKeyInput">Pexels API Key:</label>
+            <label for="apiKeyInput">Pexels API Key:
+                <a href="https://www.pexels.com/api/key/" target="_blank" class="api-key-hint">(Find my API Key)</a>
+            </label>
             <input type="password" id="apiKeyInput" placeholder="Your Pexels API Key">
         </div>
         <div>
             <label for="collectionIdInput">Collection ID:</label>
-            <input type="text" id="collectionIdInput" placeholder="e.g., vmnecek">
+            <input type="text" id="collectionIdInput" placeholder="e.g., vmnecek or mfn6mfj">
         </div>
         <button id="startButton">Start Slideshow</button>
         <p id="input-error" style="color:red; margin-top:10px;"></p>
@@ -147,7 +156,7 @@
             wallpaperElement.alt = `Fetching photos...`;
             let allPhotoUrls = [];
             let nextPageUrl = `${PEXELS_BASE_URL}collections/${collectionId}?type=photos&per_page=${PHOTOS_PER_PAGE}&page=1`;
-            const headers = { "Authorization": apiKey, "User-Agent": "PexelWallpaperDynamic/1.1" };
+            const headers = { "Authorization": apiKey, "User-Agent": "PexelWallpaperDynamic/1.2" }; // Incremented version for User-Agent
 
             try {
                 while (nextPageUrl) {
@@ -187,29 +196,41 @@
             wallpaperElement.src = images[currentIndex];
             wallpaperElement.alt = `Wallpaper ${currentIndex + 1} of ${images.length}`;
             currentIndex = (currentIndex + 1) % images.length;
-            if (currentIndex === 0) shuffleArray(images); // Re-shuffle when list completes
+            if (currentIndex === 0) { // When list completes
+                 shuffleArray(images); // Re-shuffle for new sequence
+            }
         }
 
         // --- Main Application Logic ---
         async function initializeSlideshow(apiKey, collectionId) {
-            inputContainer.classList.add("hidden"); // Hide input form if we proceed
+            inputContainer.classList.add("hidden"); 
             images = await fetchPhotosFromPexelsAPI(apiKey, collectionId);
             if (images.length > 0) {
                 shuffleArray(images);
                 setWallpaper();
                 setInterval(setWallpaper, changeInterval);
             } else {
-                // Error shown by fetchPhotosFromPexelsAPI. Optionally show input form again or offer to clear cookies.
                 statusOverlay.textContent += " Please check API key/Collection ID.";
-                // To allow re-entry, we could clear cookies and show the form:
-                statusOverlay.textContent += " You can try entering them again.";
-                setTimeout(() => { // Give user time to read message
-                    setCookie("pexelApiKey", "", -1); // Clear cookies
-                    setCookie("pexelCollectionId", "", -1);
-                    inputContainer.classList.remove("hidden"); // Show form again
-                }, 5000);
+                // Optionally offer to clear settings and re-show input form
+                statusOverlay.innerHTML += ' <a href=\"#\" onclick=\"clearSettingsAndShowForm(); return false;\">Try again?</a>';
             }
         }
+        
+        // New function to clear cookies and show form
+        function clearSettingsAndShowForm() {
+            setCookie("pexelApiKey", "", -1); 
+            setCookie("pexelCollectionId", "", -1);
+            apiKeyInput.value = "";
+            collectionIdInput.value = "";
+            inputError.textContent = "";
+            inputContainer.classList.remove("hidden");
+            statusOverlay.classList.add("hidden");
+            wallpaperElement.alt = "Please configure API Key and Collection ID.";
+            // Stop any existing slideshow interval if one was running
+            // This part is tricky as interval ID is not global. For simplicity, this might be omitted
+            // or a global intervalId variable would be needed.
+        }
+
 
         function handleConfiguration() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -218,7 +239,7 @@
 
             if (apiKey && collectionId) {
                 console.log("Using API Key and Collection ID from URL parameters.");
-                setCookie("pexelApiKey", apiKey, 30); // Store for 30 days
+                setCookie("pexelApiKey", apiKey, 30); 
                 setCookie("pexelCollectionId", collectionId, 30);
                 initializeSlideshow(apiKey, collectionId);
             } else {
@@ -231,7 +252,7 @@
                 } else {
                     console.log("No API Key/Collection ID found in URL or cookies. Showing input form.");
                     inputContainer.classList.remove("hidden");
-                    statusOverlay.classList.add("hidden"); // Hide loading message
+                    statusOverlay.classList.add("hidden"); 
                     wallpaperElement.alt = "Please configure API Key and Collection ID.";
                 }
             }
