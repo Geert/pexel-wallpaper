@@ -202,12 +202,12 @@
                 // Error shown by fetchPhotosFromPexelsAPI. Optionally show input form again or offer to clear cookies.
                 statusOverlay.textContent += " Please check API key/Collection ID.";
                 // To allow re-entry, we could clear cookies and show the form:
-                // statusOverlay.textContent += " You can try entering them again.";
-                // setTimeout(() => { // Give user time to read message
-                //     setCookie("pexelApiKey", "", -1); // Clear cookies
-                //     setCookie("pexelCollectionId", "", -1);
-                //     inputContainer.classList.remove("hidden"); // Show form again
-                // }, 5000);
+                statusOverlay.textContent += " You can try entering them again.";
+                setTimeout(() => { // Give user time to read message
+                    setCookie("pexelApiKey", "", -1); // Clear cookies
+                    setCookie("pexelCollectionId", "", -1);
+                    inputContainer.classList.remove("hidden"); // Show form again
+                }, 5000);
             }
         }
 
