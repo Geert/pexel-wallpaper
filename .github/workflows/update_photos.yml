@@ -1,0 +1,47 @@
+name: Update Pexels Photos
+
+on:
+  schedule:
+    # Runs daily at 02:00 UTC. You can change the schedule.
+    # See https://crontab.guru/ for cron schedule expressions.
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allows manual triggering
+
+permissions:
+  contents: write # Required to commit and push changes
+
+jobs:
+  update-photos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9' # Using Python 3.9 as per your environment
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run script to fetch Pexels photo URLs
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: python3 fetch_pexels_urls.py
+
+      - name: Commit and push if changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add docs/pexels_photo_urls.txt
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Automated update of Pexels photo URLs"
+            git push
+            echo "Changes committed and pushed."
+          fi

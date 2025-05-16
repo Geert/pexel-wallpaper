@@ -2,11 +2,19 @@
 import requests
 import json
 import time
+import os
 
 # --- CONFIGURATION ---
-API_KEY = "bLgBAAJVGLvf4Eu07NumxhNj4EYyi52uX87SN4LIgcK0VQL18KHc5W72"  # Replace with your Pexels API Key
+# Make sure to set the PEXELS_API_KEY environment variable in your GitHub Secrets
+API_KEY = os.getenv("PEXELS_API_KEY")
+if not API_KEY:
+    raise ValueError("Pexels API key not found. Set the PEXELS_API_KEY environment variable.")
+
 # If you know your collection ID, set it here. Otherwise, the script will list your collections first.
-COLLECTION_ID = "vmnecek"  # Example: "your_collection_id_here" 
+COLLECTION_ID = "vmnecek"  # Default collection ID for automated runs
+# Consider making COLLECTION_ID also configurable via environment variable if needed:
+# COLLECTION_ID = os.getenv("PEXELS_COLLECTION_ID", "vmnecek") 
+
 OUTPUT_FILE = "docs/pexels_photo_urls.txt"
 # Choose photo size: original, large2x, large, medium, small, portrait, landscape, tiny
 PHOTO_SIZE = "original" 
@@ -61,6 +69,9 @@ def list_my_collections():
         except (ValueError, IndexError):
             print("Invalid choice. Please enter a valid number from the list.")
 
+def list_and_select_collection():
+    return list_my_collections()
+
 def fetch_photos_from_collection(collection_id):
     print(f"\nFetching photos from collection ID: {collection_id}")
     photo_urls = []
@@ -103,23 +114,32 @@ def fetch_photos_from_collection(collection_id):
     return photo_urls
 
 if __name__ == "__main__":
-    if API_KEY == "YOUR_PEXELS_API_KEY":
-        print("Error: Please replace 'YOUR_PEXELS_API_KEY' with your actual Pexels API key in the script.")
-        exit()
+    print("Starting Pexels photo fetcher...")
 
-    target_collection_id = COLLECTION_ID
-    if not target_collection_id:
-        target_collection_id = list_my_collections()
-    
-    if target_collection_id:
-        urls = fetch_photos_from_collection(target_collection_id)
-        if urls:
-            with open(OUTPUT_FILE, "w") as f:
-                for url in urls:
-                    f.write(f"{url}\n")
-            print(f"\nSuccessfully fetched {len(urls)} photo URLs.")
-            print(f"Saved to: {OUTPUT_FILE}")
-        else:
-            print("No photo URLs were fetched.")
+    if not API_KEY:
+        print("Error: PEXELS_API_KEY environment variable not set.")
+        # exit(1) # Consider exiting if run in an environment where API_KEY is mandatory
     else:
-        print("Could not determine collection ID. Exiting.")
+        print(f"Using API Key ending with: ...{API_KEY[-4:]}") # Avoid printing the full key
+
+    # For automated runs, directly use the configured COLLECTION_ID
+    # If you still want to list collections for some automated scenarios, adjust logic here.
+    print(f"Automated run: Using predefined COLLECTION_ID: {COLLECTION_ID}")
+    photo_urls = fetch_photos_from_collection(COLLECTION_ID)
+
+    # The following part for interactive selection can be commented out or removed
+    # for a purely automated script, or kept for optional manual script execution.
+    # selected_collection_id = list_and_select_collection()
+    # if selected_collection_id:
+    #     photo_urls = fetch_photos_from_collection(selected_collection_id)
+    # else:
+    #     photo_urls = [] # Ensure photo_urls is defined
+
+    if photo_urls:
+        with open(OUTPUT_FILE, "w") as f:
+            for url in photo_urls:
+                f.write(f"{url}\n")
+        print(f"\nSuccessfully fetched {len(photo_urls)} photo URLs.")
+        print(f"Saved to: {OUTPUT_FILE}")
+    else:
+        print("No photo URLs were fetched.")
