@@ -28,50 +28,6 @@ HEADERS = {
 
 BASE_URL = "https://api.pexels.com/v1/"
 
-def list_my_collections():
-    print("Fetching your collections...")
-    url = f"{BASE_URL}collections?per_page=80" # Max per_page for collections listing
-    all_collections = []
-    page = 1
-    while url:
-        try:
-            response = requests.get(url, headers=HEADERS)
-            response.raise_for_status() # Raise an exception for HTTP errors
-            data = response.json()
-            all_collections.extend(data.get("collections", []))
-            print(f"Fetched page {page} of collections...")
-            url = data.get("next_page")
-            page += 1
-            if url: # Respect rate limits if fetching many pages of collections
-                time.sleep(1) 
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching collections: {e}")
-            if response is not None:
-                print(f"Response content: {response.text}")
-            return None
-        except json.JSONDecodeError:
-            print(f"Error decoding JSON from collections response: {response.text}")
-            return None
-
-    if not all_collections:
-        print("No collections found or error fetching them.")
-        return None
-
-    print("\nYour Collections:")
-    for i, coll in enumerate(all_collections):
-        print(f"  {i+1}. ID: {coll['id']}, Title: {coll['title']}, Photos: {coll.get('photos_count', 'N/A')}, Videos: {coll.get('videos_count', 'N/A')}")
-    
-    while True:
-        try:
-            choice = input("Enter the number of the collection you want to use: ")
-            selected_collection = all_collections[int(choice) - 1]
-            return selected_collection['id']
-        except (ValueError, IndexError):
-            print("Invalid choice. Please enter a valid number from the list.")
-
-def list_and_select_collection():
-    return list_my_collections()
-
 def fetch_photos_from_collection(collection_id):
     print(f"\nFetching photos from collection ID: {collection_id}")
     photo_urls = []
@@ -81,13 +37,6 @@ def fetch_photos_from_collection(collection_id):
         print(f"\nFetching data from URL: {api_url_to_fetch}")
         
         response = requests.get(api_url_to_fetch, headers=HEADERS)
-
-        print(f"DEBUG: Actual Requested URL by 'requests': {response.url}")
-        print(f"DEBUG: Response Status Code: {response.status_code}")
-        if response.status_code == 200:
-            print(f"DEBUG: Response Text (first 500 chars): {response.text[:500]}")
-        else:
-            print(f"DEBUG: Response Text (error): {response.text}")
 
         response.raise_for_status()  # Check for HTTP errors (e.g., 401, 403, 404, 500)
         data = response.json()
@@ -116,24 +65,10 @@ def fetch_photos_from_collection(collection_id):
 if __name__ == "__main__":
     print("Starting Pexels photo fetcher...")
 
-    if not API_KEY:
-        print("Error: PEXELS_API_KEY environment variable not set.")
-        # exit(1) # Consider exiting if run in an environment where API_KEY is mandatory
-    else:
-        print(f"Using API Key ending with: ...{API_KEY[-4:]}") # Avoid printing the full key
+    print(f"Using API Key ending with: ...{API_KEY[-4:]}") # Avoid printing the full key
 
-    # For automated runs, directly use the configured COLLECTION_ID
-    # If you still want to list collections for some automated scenarios, adjust logic here.
     print(f"Automated run: Using predefined COLLECTION_ID: {COLLECTION_ID}")
     photo_urls = fetch_photos_from_collection(COLLECTION_ID)
-
-    # The following part for interactive selection can be commented out or removed
-    # for a purely automated script, or kept for optional manual script execution.
-    # selected_collection_id = list_and_select_collection()
-    # if selected_collection_id:
-    #     photo_urls = fetch_photos_from_collection(selected_collection_id)
-    # else:
-    #     photo_urls = [] # Ensure photo_urls is defined
 
     if photo_urls:
         with open(OUTPUT_FILE, "w") as f:
