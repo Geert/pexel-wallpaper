@@ -4,16 +4,16 @@ import json
 import time
 import os
 
+COLLECTION_ID = "vmnecek"  # Default collection ID for automated runs
+# COLLECTION_ID = "xbncfpg"  # Default collection ID for automated runs
+
+
+
 # --- CONFIGURATION ---
 # Make sure to set the PEXELS_API_KEY environment variable in your GitHub Secrets
 API_KEY = os.getenv("PEXELS_API_KEY")
 if not API_KEY:
     raise ValueError("Pexels API key not found. Set the PEXELS_API_KEY environment variable.")
-
-# If you know your collection ID, set it here. Otherwise, the script will list your collections first.
-COLLECTION_ID = "vmnecek"  # Default collection ID for automated runs
-# Consider making COLLECTION_ID also configurable via environment variable if needed:
-# COLLECTION_ID = os.getenv("PEXELS_COLLECTION_ID", "vmnecek") 
 
 OUTPUT_FILE = "docs/pexels_photo_urls.txt"
 # Choose photo size: original, large2x, large, medium, small, portrait, landscape, tiny
@@ -31,7 +31,7 @@ BASE_URL = "https://api.pexels.com/v1/"
 def fetch_photos_from_collection(collection_id):
     print(f"\nFetching photos from collection ID: {collection_id}")
     photo_urls = []
-    api_url_to_fetch = f"{BASE_URL}collections/{collection_id}?type=photos&per_page={PHOTOS_PER_PAGE}&page=1"
+    api_url_to_fetch = f"{BASE_URL}collections/{collection_id}?per_page={PHOTOS_PER_PAGE}"
 
     while api_url_to_fetch:
         print(f"\nFetching data from URL: {api_url_to_fetch}")
