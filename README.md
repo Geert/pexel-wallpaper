@@ -1,8 +1,8 @@
-# Pexels Dynamic Wallpaper for Plash
+# Pexels Dynamic Wallpaper
 
-Set your macOS desktop to a dynamic slideshow of beautiful images from your favorite Pexels collections using the [Plash app](https://apps.apple.com/us/app/plash/id1494023538?mt=12).
+Set your desktop to a dynamic slideshow of beautiful images from your favorite Pexels collections using the [Plash app (Mac OS)](https://apps.apple.com/us/app/plash/id1494023538) or [Lively App (Windows)](https://apps.microsoft.com/detail/9NTM2QC6QWS7)
 
-This web application provides the Pexels integration for Plash, allowing you to easily configure and display high-quality wallpapers.
+This web application provides the Pexels integration for Plash or Lively, allowing you to easily configure and display high-quality wallpapers.
 
 [Live Demo](https://geert.github.io/pexel-wallpaper/)
 
@@ -10,20 +10,29 @@ This web application provides the Pexels integration for Plash, allowing you to 
 
 To get started, follow these steps which are also displayed in the settings form of the application:
 
+### Mac OS
 1.  **Install Plash:**
-    *   Download and install Plash from the [Mac App Store](https://apps.apple.com/us/app/plash/id1494023538?mt=12).
+    *   Download and install Plash from the [Mac App Store](https://apps.apple.com/us/app/plash/id1494023538).
 2.  **Add Web App to Plash:**
     *   In Plash preferences, under 'Websites', add this URL: `https://geert.github.io/pexel-wallpaper/`
 3.  **Enable Browsing Mode:**
     *   Ensure 'Browsing Mode' is enabled in Plash for the URL above. This allows you to interact with the settings form directly on your desktop.
-4.  **Enter Pexels API Key:**
+
+### Windows
+1. **Install Lively:**
+   *  Download and install from the [Microsoft Store](https://apps.microsoft.com/detail/9NTM2QC6QWS7)
+2. **Add Web App to Lively:**
+   *  In Lively, choose the + button, add this URL: `https://geert.github.io/pexel-wallpaper/`
+
+### Configure Pexels Wallpaper
+1.  **Enter Pexels API Key:**
     *   In the settings form (now visible on your desktop via Plash), enter your Pexels API key. You can get one from [Pexels API](https://www.pexels.com/api/key/).
-5.  **Provide Pexels Collection URL:**
+2.  **Provide Pexels Collection URL:**
     *   Paste the URL of the Pexels collection you wish to use as your wallpaper source (e.g., `https://www.pexels.com/collections/wallpapers-vmnecek/`).
-6.  **Start Slideshow:**
+3.  **Start Slideshow:**
     *   Click "Apply Settings & Start Slideshow".
 
-Your Mac desktop will now cycle through images from your selected Pexels collection!
+Your Desktop will now cycle through images from your selected Pexels collection!
 
 ## Features
 
