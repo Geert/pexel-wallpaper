@@ -145,14 +145,21 @@ function translatePage() {
 
     // Translate alt texts for wallpaper (dynamic, set elsewhere via updateWallpaperAltText)
     // Translate status messages (dynamic, set via showStatus)
-    updateUsageIndicator();
+    updateUsageIndicator(true);
+    observePlashClass();
 }
+
+let plashClassObserver = null;
 
 function detectUsageEnvironmentKey() {
     const ua = (navigator.userAgent || "").toLowerCase();
     const platform = (navigator.platform || "").toLowerCase();
 
-    if (ua.includes("plash")) {
+    if (typeof window.livelyPropertyListener === "function" || (window.chrome && window.chrome.webview)) {
+        return "usageLivelyWindows";
+    }
+
+    if (document.documentElement.classList.contains("is-plash-app") || ua.includes("plash")) {
         return "usagePlashMac";
     }
 
@@ -174,7 +181,23 @@ function detectUsageEnvironmentKey() {
     return "usageBrowserOther";
 }
 
-function updateUsageIndicator() {
+function observePlashClass() {
+    if (plashClassObserver || !("MutationObserver" in window)) {
+        return;
+    }
+
+    plashClassObserver = new MutationObserver(() => {
+        if (document.documentElement.classList.contains("is-plash-app")) {
+            updateUsageIndicator();
+            plashClassObserver.disconnect();
+            plashClassObserver = null;
+        }
+    });
+
+    plashClassObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+}
+
+function updateUsageIndicator(forceUpdate = false) {
     if (!usageIndicator || !currentTranslations) return;
 
     const usageLabelKey = detectUsageEnvironmentKey();
@@ -184,7 +207,13 @@ function updateUsageIndicator() {
     if (!labelValue) return;
 
     const prefixText = labelPrefix ? `${labelPrefix.trim()}: ` : "";
-    usageIndicator.textContent = `${prefixText}${labelValue}`;
+    const newLabel = `${prefixText}${labelValue}`;
+
+    if (!forceUpdate && usageIndicator.textContent === newLabel && !usageIndicator.classList.contains("hidden")) {
+        return;
+    }
+
+    usageIndicator.textContent = newLabel;
     usageIndicator.classList.remove("hidden");
 }
 
@@ -517,6 +546,8 @@ function stopDefaultSlideshow() {
 document.addEventListener('DOMContentLoaded', async () => {
     await setLanguage(); // Ensure setLanguage completes before other initializations
     handleConfiguration(); 
+    updateUsageIndicator(true);
+    observePlashClass();
 
     // --- JavaScript voor muis inactiviteit detectie ---
     let inactivityMouseTimer;
