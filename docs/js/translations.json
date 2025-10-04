@@ -32,7 +32,13 @@
         "wallpaperAltLocalError": "Error loading default wallpapers. Please create pexels_photo_urls.txt.",
         "statusLocalFileNotFound": "Default wallpaper file (pexels_photo_urls.txt) not found or empty. Please create it or configure Pexels API.",
         "defaultSlideshowStopped": "Default local slideshow stopped.",
-        "defaultSlideshowStarted": "Default local slideshow started."
+        "defaultSlideshowStarted": "Default local slideshow started.",
+        "usageLabel": "Using",
+        "usagePlashMac": "Plash on macOS",
+        "usageLivelyWindows": "Lively on Windows",
+        "usageBrowserMac": "Browser on macOS",
+        "usageBrowserWindows": "Browser on Windows",
+        "usageBrowserOther": "Browser"
     },
     "nl": {
         "settingsButtonTitle": "Wijzig API-sleutel of collectie",
@@ -67,7 +73,13 @@
         "wallpaperAltLocalError": "Fout bij laden standaard achtergronden. Maak pexels_photo_urls.txt aan.",
         "statusLocalFileNotFound": "Standaard achtergrondbestand (pexels_photo_urls.txt) niet gevonden of leeg. Maak het aan of configureer Pexels API.",
         "defaultSlideshowStopped": "Standaard lokale diavoorstelling gestopt.",
-        "defaultSlideshowStarted": "Standaard lokale diavoorstelling gestart."
+        "defaultSlideshowStarted": "Standaard lokale diavoorstelling gestart.",
+        "usageLabel": "Bron",
+        "usagePlashMac": "Plash op macOS",
+        "usageLivelyWindows": "Lively op Windows",
+        "usageBrowserMac": "Browser op macOS",
+        "usageBrowserWindows": "Browser op Windows",
+        "usageBrowserOther": "Browser"
     },
     "de": {
         "settingsButtonTitle": "API-Schlüssel oder Sammlung ändern",
@@ -102,7 +114,13 @@
         "wallpaperAltLocalError": "Fehler beim Laden der Standard-Hintergrundbilder. Bitte erstellen Sie pexels_photo_urls.txt.",
         "statusLocalFileNotFound": "Standard-Hintergrundbilddatei (pexels_photo_urls.txt) nicht gefunden oder leer. Bitte erstellen Sie sie oder konfigurieren Sie die Pexels-API.",
         "defaultSlideshowStopped": "Standard-Diashow (lokal) gestoppt.",
-        "defaultSlideshowStarted": "Standard-Diashow (lokal) gestartet."
+        "defaultSlideshowStarted": "Standard-Diashow (lokal) gestartet.",
+        "usageLabel": "Quelle",
+        "usagePlashMac": "Plash auf macOS",
+        "usageLivelyWindows": "Lively auf Windows",
+        "usageBrowserMac": "Browser auf macOS",
+        "usageBrowserWindows": "Browser auf Windows",
+        "usageBrowserOther": "Browser"
     },
     "fr": {
         "settingsButtonTitle": "Modifier la clé API ou la collection",
@@ -137,6 +155,12 @@
         "wallpaperAltLocalError": "Erreur lors du chargement des fonds d'écran par défaut. Veuillez créer pexels_photo_urls.txt.",
         "statusLocalFileNotFound": "Fichier de fonds d'écran par défaut (pexels_photo_urls.txt) introuvable ou vide. Veuillez le créer ou configurer l'API Pexels.",
         "defaultSlideshowStopped": "Diaporama local par défaut arrêté.",
-        "defaultSlideshowStarted": "Diaporama local par défaut démarré."
+        "defaultSlideshowStarted": "Diaporama local par défaut démarré.",
+        "usageLabel": "Source",
+        "usagePlashMac": "Plash sur macOS",
+        "usageLivelyWindows": "Lively sur Windows",
+        "usageBrowserMac": "Navigateur sur macOS",
+        "usageBrowserWindows": "Navigateur sur Windows",
+        "usageBrowserOther": "Navigateur"
     }
 }

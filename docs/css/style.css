@@ -24,6 +24,19 @@ body, html {
     font-size: 14px;
     z-index: 1000;
 }
+#usage-indicator {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    padding: 6px 10px;
+    background-color: rgba(0, 0, 0, 0.55);
+    color: #ffffff;
+    font-size: 12px;
+    border-radius: 4px;
+    z-index: 1000;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+}
 #settingsButton {
     position: fixed;
     top: 15px;

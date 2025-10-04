@@ -36,6 +36,7 @@ const collectionUrlInput = document.getElementById("collectionUrlInput");
 const startButton = document.getElementById("startButton");
 const inputError = document.getElementById("input-error");
 const closeFormButton = document.getElementById("closeFormButton");
+const usageIndicator = document.getElementById("usage-indicator");
 
 // --- Functions ---
 function getBrowserLanguage() {
@@ -65,7 +66,13 @@ async function loadTranslations() {
                 "startButtonText": "Start",
                 "statusLoading": "Loading...",
                 "errorBothRequired": "API Key and Collection URL are required.",
-                "errorInvalidPexelsUrl": "Invalid Collection URL."
+                "errorInvalidPexelsUrl": "Invalid Collection URL.",
+                "usageLabel": "Using",
+                "usagePlashMac": "Plash on macOS",
+                "usageLivelyWindows": "Lively on Windows",
+                "usageBrowserMac": "Browser on macOS",
+                "usageBrowserWindows": "Browser on Windows",
+                "usageBrowserOther": "Browser"
                 // Add more essential fallbacks if necessary
             }
         };
@@ -138,6 +145,47 @@ function translatePage() {
 
     // Translate alt texts for wallpaper (dynamic, set elsewhere via updateWallpaperAltText)
     // Translate status messages (dynamic, set via showStatus)
+    updateUsageIndicator();
+}
+
+function detectUsageEnvironmentKey() {
+    const ua = (navigator.userAgent || "").toLowerCase();
+    const platform = (navigator.platform || "").toLowerCase();
+
+    if (ua.includes("plash")) {
+        return "usagePlashMac";
+    }
+
+    if (ua.includes("livelywallpaper")) {
+        return "usageLivelyWindows";
+    }
+
+    const isMac = platform.includes("mac") || ua.includes("mac os") || ua.includes("macintosh");
+    const isWindows = platform.includes("win") || ua.includes("windows");
+
+    if (isMac) {
+        return "usageBrowserMac";
+    }
+
+    if (isWindows) {
+        return "usageBrowserWindows";
+    }
+
+    return "usageBrowserOther";
+}
+
+function updateUsageIndicator() {
+    if (!usageIndicator || !currentTranslations) return;
+
+    const usageLabelKey = detectUsageEnvironmentKey();
+    const labelPrefix = currentTranslations.usageLabel || "";
+    const labelValue = currentTranslations[usageLabelKey] || currentTranslations.usageBrowserOther;
+
+    if (!labelValue) return;
+
+    const prefixText = labelPrefix ? `${labelPrefix.trim()}: ` : "";
+    usageIndicator.textContent = `${prefixText}${labelValue}`;
+    usageIndicator.classList.remove("hidden");
 }
 
 function setCookie(name, value, days) {

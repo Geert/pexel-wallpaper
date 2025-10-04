@@ -4,7 +4,7 @@
 - [ ] Vervang het cookie-gebaseerde opslaan van de Pexels API-sleutel door een opslag die niet automatisch naar de server wordt gestuurd (bijv. `sessionStorage`) en werk alle referenties bij (`docs/js/script.js:143-409`).
 - [ ] Verwerk `apiKey`/`collectionUrl` query-parameters zonder de sleutel zichtbaar te laten in de adresbalk of instructies; verwijder ze met `history.replaceState` en toon in de UI een geschoonde URL (`docs/js/script.js:306-371`, `docs/index.html:29`).
 - [ ] Los de verwijzing naar de niet-bestaande `updateWallpaperAltText()` op zodat de slideshow geen runtime-fouten meer logt (`docs/js/script.js:330`).
-- [ ] Breid de documentatie uit met een duidelijke waarschuwing dat API-sleutels client-side worden gebruikt en benoem veilige alternatieven (eigen proxy, beperkte sleutel) (`README.md`).
+
 
 ## 🧭 Middelbare prioriteit – Gebruikservaring
 - [ ] Maak de instellingenknop toegankelijk voor toetsenbord en touch; momenteel blijft het element verborgen zonder muisbeweging en blokkeert `#settingsHoverTrigger` interacties (`docs/css/style.css:18-63`, `docs/js/script.js:387-412`).
