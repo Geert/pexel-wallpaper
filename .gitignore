@@ -24,3 +24,5 @@ Gemfile.lock
 __pycache__/
 *.py[cod]
 *$py.class
+node*
+.DS_Store

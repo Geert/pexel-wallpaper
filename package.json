@@ -1,0 +1,13 @@
+{
+  "name": "pexel-wallpaper",
+  "version": "1.0.0",
+  "description": "Tests voor Pexel Wallpaper",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "29.7.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "jsdom": "22.1.0"
+  }
+}
