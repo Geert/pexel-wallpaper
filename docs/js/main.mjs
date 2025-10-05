@@ -1,4 +1,9 @@
-import { LOCAL_IMAGE_URLS_FILE, CHANGE_INTERVAL_MS, STORAGE_KEYS } from './config.mjs';
+import {
+  LOCAL_IMAGE_URLS_FILE,
+  CHANGE_INTERVAL_MS,
+  STORAGE_KEYS,
+  PEXELS_PAGE_BASE_URL,
+} from './config.mjs';
 import {
   setStoredValue,
   getStoredValue,
@@ -48,9 +53,26 @@ const SETUP_SEEN_PREFIX = 'pexelWallpaperSetupSeen_';
 const firstVisitHandledKeys = new Set();
 let settingsUIVisible = false;
 let plashClassObserver = null;
+let currentPhotoAttribution = null;
 
 if (typeof window !== 'undefined') {
   window.wallpaperUsageSource = usageSourceState;
+}
+
+function extractPexelsIdFromText(text) {
+  if (typeof text !== 'string') return null;
+  const slug = text.trim().replace(/\/$/, '');
+  const photoSlugMatch = slug.match(/\/photo\/(?:[^/]*-)?(\d+)(?:\/)?$/i);
+  if (photoSlugMatch && photoSlugMatch[1]) {
+    return photoSlugMatch[1];
+  }
+
+  const imagePathMatch = slug.match(/\/photos\/(\d+)(?:\/|$)/i);
+  if (imagePathMatch && imagePathMatch[1]) {
+    return imagePathMatch[1];
+  }
+
+  return null;
 }
 
 function updateCurrentUrlDisplay() {
@@ -71,6 +93,44 @@ function applyUsageIndicatorVisibility() {
   } else {
     usageIndicator.classList.add('hidden');
   }
+}
+
+function normalizePhotoEntry(entry) {
+  if (!entry) return null;
+  if (typeof entry === 'string') {
+    const trimmed = entry.trim();
+    if (!trimmed) return null;
+    const derivedId = extractPexelsIdFromText(trimmed);
+    return {
+      imageUrl: trimmed,
+      pageUrl: derivedId
+        ? `${PEXELS_PAGE_BASE_URL}${derivedId}/`
+        : trimmed.includes('pexels.com')
+          ? trimmed
+          : null,
+      photographerUrl: null,
+    };
+  }
+
+  if (typeof entry === 'object') {
+    const imageUrl = entry.imageUrl || entry.src || entry.url;
+    if (!imageUrl) return null;
+    const derivedId =
+      entry.id ||
+      extractPexelsIdFromText(entry.pageUrl || '') ||
+      extractPexelsIdFromText(imageUrl || '');
+    return {
+      imageUrl,
+      pageUrl: entry.pageUrl || (derivedId ? `${PEXELS_PAGE_BASE_URL}${derivedId}/` : null),
+      photographerUrl: entry.photographerUrl || null,
+    };
+  }
+
+  return null;
+}
+
+function normalizePhotoEntryList(list) {
+  return (Array.isArray(list) ? list : []).map((item) => normalizePhotoEntry(item)).filter(Boolean);
 }
 
 function detectUsageEnvironmentKey() {
@@ -227,29 +287,34 @@ function applyInstructionsForUsage() {
 }
 
 function updateUsageIndicator(forceUpdate = false) {
-  if (!usageIndicator || !currentTranslations) return;
+  if (!usageIndicator) return;
 
-  const usageLabelKey = detectUsageEnvironmentKey();
-  const labelPrefix = currentTranslations.usageLabel || '';
-  const labelValue = currentTranslations[usageLabelKey] || currentTranslations.usageBrowserOther;
-
-  if (!labelValue) return;
-
-  const prefixText = labelPrefix ? `${labelPrefix.trim()}: ` : '';
-  const newLabel = `${prefixText}${labelValue}`;
+  const usageKey = detectUsageEnvironmentKey();
+  const linkLabel = 'Photos provided by Pexels';
+  const fallbackLink = 'https://www.pexels.com';
+  const linkTarget =
+    (currentPhotoAttribution &&
+      (currentPhotoAttribution.pageUrl || currentPhotoAttribution.imageUrl)) ||
+    fallbackLink;
+  const currentHref = usageIndicator.getAttribute('href') || '';
 
   if (
     !forceUpdate &&
-    usageIndicator.textContent === newLabel &&
+    usageIndicator.textContent === linkLabel &&
+    currentHref === linkTarget &&
     !usageIndicator.classList.contains('hidden')
   ) {
-    return;
-  }
+    usageSourceState.key = usageKey;
+  } else {
+    usageIndicator.textContent = linkLabel;
+    usageIndicator.setAttribute('href', linkTarget);
+    usageIndicator.setAttribute('target', '_blank');
+    usageIndicator.setAttribute('rel', 'noopener noreferrer');
 
-  usageIndicator.textContent = newLabel;
-  usageSourceState.key = usageLabelKey;
-  usageSourceState.label = labelValue;
-  usageSourceState.display = newLabel;
+    usageSourceState.key = usageKey;
+    usageSourceState.label = linkLabel;
+    usageSourceState.display = linkLabel;
+  }
 
   applyInstructionsForUsage();
   handleFirstVisitFlow();
@@ -340,12 +405,17 @@ function handleEscKey(event) {
 
 function setWallpaper() {
   if (images.length === 0) return;
-  wallpaperElement.src = images[currentIndex];
+  const entry = normalizePhotoEntry(images[currentIndex]);
+  if (!entry) return;
+
+  wallpaperElement.src = entry.imageUrl;
   wallpaperElement.alt = `${currentTranslations.wallpaperAltWallpaper} ${currentIndex + 1} ${currentTranslations.wallpaperAltOf} ${images.length}`;
+  currentPhotoAttribution = entry;
   currentIndex = (currentIndex + 1) % images.length;
   if (currentIndex === 0) {
     shuffleArray(images);
   }
+  updateUsageIndicator(true);
 }
 
 function shuffleArray(array) {
@@ -374,8 +444,10 @@ async function initializeSlideshow(apiKey, collectionId) {
     showStatus(cachedMessage, false, { duration: 1500 });
   }
 
-  if (fetchedUrls && fetchedUrls.length > 0) {
-    images = fetchedUrls;
+  const normalizedEntries = normalizePhotoEntryList(fetchedUrls);
+
+  if (normalizedEntries.length > 0) {
+    images = normalizedEntries;
     shuffleArray(images);
     currentIndex = 0;
     setWallpaper();
@@ -385,8 +457,10 @@ async function initializeSlideshow(apiKey, collectionId) {
     updateWallpaperAltText();
   } else {
     images = [];
+    currentPhotoAttribution = null;
     showStatus(currentTranslations.statusNoPhotosFound, true, { persistent: true });
     wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
+    updateUsageIndicator(true);
   }
 }
 
@@ -405,10 +479,12 @@ async function startDefaultSlideshowFromLocalFile() {
 
     if (loadedImages.length === 0) {
       wallpaperElement.alt = currentTranslations.wallpaperAltLocalError;
+      currentPhotoAttribution = null;
+      updateUsageIndicator(true);
       return;
     }
 
-    defaultImages = loadedImages;
+    defaultImages = normalizePhotoEntryList(loadedImages);
     shuffleArray(defaultImages);
     setDefaultWallpaper();
     defaultSlideshowIntervalId = setInterval(setDefaultWallpaper, CHANGE_INTERVAL_MS);
@@ -420,17 +496,24 @@ async function startDefaultSlideshowFromLocalFile() {
     showStatus(`${currentTranslations.statusLocalFileNotFound} (${error.message})`, true, {
       persistent: true,
     });
+    currentPhotoAttribution = null;
+    updateUsageIndicator(true);
   }
 }
 
 function setDefaultWallpaper() {
   if (defaultImages.length === 0) return;
-  wallpaperElement.src = defaultImages[defaultCurrentIndex];
+  const entry = normalizePhotoEntry(defaultImages[defaultCurrentIndex]);
+  if (!entry) return;
+
+  wallpaperElement.src = entry.imageUrl;
   wallpaperElement.alt = `${currentTranslations.wallpaperAltWallpaper} (Default) ${defaultCurrentIndex + 1} ${currentTranslations.wallpaperAltOf} ${defaultImages.length}`;
+  currentPhotoAttribution = entry;
   defaultCurrentIndex = (defaultCurrentIndex + 1) % defaultImages.length;
   if (defaultCurrentIndex === 0) {
     shuffleArray(defaultImages);
   }
+  updateUsageIndicator(true);
 }
 
 function stopDefaultSlideshow() {
@@ -451,6 +534,8 @@ function clearSettingsAndShowForm() {
   clearStoredValue(STORAGE_KEYS.apiKey);
   clearStoredValue(STORAGE_KEYS.collectionId);
   clearStoredValue(STORAGE_KEYS.lastCollectionUrl);
+  currentPhotoAttribution = null;
+  updateUsageIndicator(true);
   showSettingsForm();
 }
 

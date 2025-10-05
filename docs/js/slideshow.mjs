@@ -4,8 +4,45 @@ import {
   PHOTO_SIZE_TO_DISPLAY,
   FETCH_USER_AGENT,
   LOCAL_IMAGE_URLS_FILE,
+  PEXELS_PAGE_BASE_URL,
 } from './config.mjs';
 import { cachePhotoUrls, getCachedPhotoUrls } from './storage.mjs';
+
+function extractPexelsId(text) {
+  if (typeof text !== 'string') return null;
+  const slug = text.trim().replace(/\/$/, '');
+  const photoSlugMatch = slug.match(/\/photo\/(?:[^/]*-)?(\d+)(?:\/)?$/i);
+  if (photoSlugMatch && photoSlugMatch[1]) {
+    return photoSlugMatch[1];
+  }
+
+  const imagePathMatch = slug.match(/\/photos\/(\d+)(?:\/|$)/i);
+  if (imagePathMatch && imagePathMatch[1]) {
+    return imagePathMatch[1];
+  }
+
+  return null;
+}
+
+function buildPexelsPageUrlFromPhoto(photo) {
+  if (photo && photo.id) {
+    return `${PEXELS_PAGE_BASE_URL}${photo.id}/`;
+  }
+  if (photo && typeof photo.url === 'string') {
+    const derivedId = extractPexelsId(photo.url);
+    if (derivedId) {
+      return `${PEXELS_PAGE_BASE_URL}${derivedId}/`;
+    }
+  }
+
+  if (photo && photo.src) {
+    const derivedId = extractPexelsId(photo.src[PHOTO_SIZE_TO_DISPLAY] || '');
+    if (derivedId) {
+      return `${PEXELS_PAGE_BASE_URL}${derivedId}/`;
+    }
+  }
+  return null;
+}
 
 function buildHeaders(apiKey) {
   return {
@@ -55,7 +92,7 @@ export async function fetchPhotosFromPexelsAPI({
   wallpaperElement.src = '';
   wallpaperElement.alt = currentTranslations.wallpaperAltFetching;
 
-  const allPhotoUrls = [];
+  const allPhotoEntries = [];
   let nextPageUrl = `${PEXELS_BASE_URL}collections/${collectionId}?type=photos&per_page=${PHOTOS_PER_PAGE}&page=1`;
   const headers = buildHeaders(apiKey);
 
@@ -86,7 +123,14 @@ export async function fetchPhotosFromPexelsAPI({
       const mediaItems = data.media || [];
       mediaItems.forEach((photo) => {
         if (photo.type === 'Photo' && photo.src && photo.src[PHOTO_SIZE_TO_DISPLAY]) {
-          allPhotoUrls.push(photo.src[PHOTO_SIZE_TO_DISPLAY]);
+          const photoId = photo.id || null;
+          const pageUrl = buildPexelsPageUrlFromPhoto(photo);
+          allPhotoEntries.push({
+            imageUrl: photo.src[PHOTO_SIZE_TO_DISPLAY],
+            pageUrl,
+            photographerUrl: photo.photographer_url || null,
+            id: photoId,
+          });
         }
       });
       nextPageUrl = data.next_page || null;
@@ -95,16 +139,16 @@ export async function fetchPhotosFromPexelsAPI({
       }
     }
 
-    if (allPhotoUrls.length === 0) {
+    if (allPhotoEntries.length === 0) {
       showStatus(currentTranslations.statusNoPhotosFound, true, { persistent: true });
       wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
     } else {
-      const successMessage = `${currentTranslations.statusLoading} ${allPhotoUrls.length} ${currentTranslations.wallpaperAltWallpaper}. ${currentTranslations.slideshowResumed}...`;
+      const successMessage = `${currentTranslations.statusLoading} ${allPhotoEntries.length} ${currentTranslations.wallpaperAltWallpaper}. ${currentTranslations.slideshowResumed}...`;
       showStatus(successMessage, false, { duration: 3000 });
-      cachePhotoUrls(collectionId, allPhotoUrls);
+      cachePhotoUrls(collectionId, allPhotoEntries);
     }
 
-    return allPhotoUrls;
+    return allPhotoEntries;
   } catch (error) {
     console.error('Error fetching Pexels photos:', error);
     const friendlyMessage = getPexelsErrorMessage(currentTranslations, error);
@@ -131,7 +175,24 @@ export async function loadDefaultImageList({
     return [];
   }
   const text = await response.text();
-  const defaultImages = text.split('\n').filter((url) => url.trim() !== '');
+  const defaultImages = text
+    .split('\n')
+    .map((url) => url.trim())
+    .filter(Boolean)
+    .map((url) => {
+      const derivedId = extractPexelsId(url);
+      const pageUrl = derivedId
+        ? `${PEXELS_PAGE_BASE_URL}${derivedId}/`
+        : url.includes('pexels.com')
+          ? url
+          : null;
+      return {
+        imageUrl: url,
+        pageUrl,
+        photographerUrl: null,
+        id: derivedId,
+      };
+    });
 
   if (defaultImages.length === 0) {
     showStatus(currentTranslations.statusLocalFileNotFound, true, { persistent: true });
