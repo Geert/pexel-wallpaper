@@ -32,6 +32,19 @@ To get started, follow these steps which are also displayed in the settings form
 3.  **Start Slideshow:**
     *   Click "Apply Settings & Start Slideshow".
 
+If you prefer to run without an API key, the app falls back to the local list in `docs/pexels_photo_urls.txt`. Refresh that list anytime by running `python fetch_pexels_urls.py` (requires `PEXELS_API_KEY` in your environment) or update the file manually with one image URL per line.
+
+## Updating Cached Wallpapers
+
+1. Copy `.env.example` to `.env` and add your `PEXELS_API_KEY`.
+2. Create a virtual environment and install Python dependencies: `pip install -r requirements.txt`.
+3. Run `python fetch_pexels_urls.py` (or `./update.sh`) to regenerate `docs/pexels_photo_urls.txt` with the latest items from your default collection.
+
+## Development
+
+- `npm test` – run the Jest unit tests.
+- `npm run lint` – check JavaScript (ESLint + Prettier) and Python (ruff) styling.
+
 Your Desktop will now cycle through images from your selected Pexels collection!
 
 ## Features

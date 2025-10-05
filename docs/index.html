@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pexel Wallpaper (Enhanced)</title>
     <link rel="preload" href="css/style.css" as="style">
-    <link rel="preload" href="js/script.js" as="script">
+    <link rel="modulepreload" href="js/main.mjs">
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="images/favicon.ico" type="image/x-icon">
     <link rel="icon" type="image/png" sizes="16x16" href="images/icon-16.png">
@@ -16,7 +16,7 @@
 </head>
 <body>
     <div id="settingsHoverTrigger"></div>
-    <div id="status-overlay" class="hidden">Loading...</div>
+    <div id="status-overlay" class="hidden" role="status" aria-live="polite" aria-atomic="true">Loading...</div>
     <img id="wallpaper" src="" alt="Loading wallpaper...">
     <button id="settingsButton" title="Change API Key or Collection">⚙️</button>
     <span id="settingsButtonLabel">Open instellingen</span>
@@ -40,12 +40,13 @@
             <input type="text" id="collectionUrlInput" placeholder="e.g., https://www.pexels.com/collections/wallpapers-vmnecek/">
         </div>
         <button id="startButton">Apply Settings & Start Slideshow</button>
+        <button id="resetButton" type="button" class="secondary-button">Reset saved settings</button>
         <p id="input-error"></p>
         
     </div>
 
     <div id="usage-indicator" class="hidden" aria-live="polite"></div>
 
-    <script src="js/script.js" defer></script>
+    <script type="module" src="js/main.mjs"></script>
 </body>
 </html>

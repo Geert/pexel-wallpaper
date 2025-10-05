@@ -24,6 +24,9 @@ body, html {
     font-size: 14px;
     z-index: 1000;
 }
+#status-overlay.error {
+    background-color: rgba(160, 0, 0, 0.85);
+}
 #usage-indicator {
     position: fixed;
     right: 16px;
@@ -52,9 +55,9 @@ body, html {
     line-height: 44px;
     text-align: center;
     cursor: pointer;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0.25;
+    visibility: visible;
+    transition: opacity 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 #settingsButton:hover {
@@ -68,6 +71,7 @@ body, html {
     width: 100vw;
     height: 100vh;
     z-index: 998;
+    pointer-events: none;
 }
 #settingsButtonLabel {
     position: fixed;
@@ -85,6 +89,16 @@ body, html {
     transition: opacity 0.3s ease, visibility 0.3s ease;
     pointer-events: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+#settingsButton.settings-visible,
+#settingsButton:focus,
+#settingsButton:hover {
+    opacity: 1;
+}
+#settingsButtonLabel.settings-visible,
+#settingsButton:focus + #settingsButtonLabel {
+    opacity: 1;
+    visibility: visible;
 }
 #closeFormButton {
     position: absolute;
@@ -184,6 +198,24 @@ body, html {
 }
 #input-container button:hover {
     background-color: #0056b3;
+}
+#input-container .secondary-button {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 10px 20px;
+    background-color: transparent;
+    color: #007bff;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+#input-container .secondary-button:hover,
+#input-container .secondary-button:focus-visible {
+    background-color: #007bff;
+    color: #ffffff;
+    outline: none;
 }
 .api-key-hint {
     font-size: 0.8em;
