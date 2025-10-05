@@ -1,8 +1,9 @@
 # Python script to fetch photo URLs from a Pexels collection
-import requests
-import json
-import time
 import os
+import time
+
+import requests
+from dotenv import load_dotenv
 
 COLLECTION_ID = "vmnecek"  # Default collection ID for automated runs
 # COLLECTION_ID = "xbncfpg"  # Default collection ID for automated runs
@@ -11,6 +12,7 @@ COLLECTION_ID = "vmnecek"  # Default collection ID for automated runs
 
 # --- CONFIGURATION ---
 # Make sure to set the PEXELS_API_KEY environment variable in your GitHub Secrets
+load_dotenv()
 API_KEY = os.getenv("PEXELS_API_KEY")
 if not API_KEY:
     raise ValueError("Pexels API key not found. Set the PEXELS_API_KEY environment variable.")
@@ -19,6 +21,9 @@ OUTPUT_FILE = "docs/pexels_photo_urls.txt"
 # Choose photo size: original, large2x, large, medium, small, portrait, landscape, tiny
 PHOTO_SIZE = "original" 
 PHOTOS_PER_PAGE = 80
+REQUEST_TIMEOUT = 15
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 2
 # --- END CONFIGURATION ---
 
 HEADERS = {
@@ -36,12 +41,29 @@ def fetch_photos_from_collection(collection_id):
     while api_url_to_fetch:
         print(f"\nFetching data from URL: {api_url_to_fetch}")
         
-        response = requests.get(api_url_to_fetch, headers=HEADERS)
+        response = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = requests.get(api_url_to_fetch, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+                response.raise_for_status()
+                break
+            except requests.exceptions.RequestException as exc:
+                if attempt == MAX_RETRIES:
+                    print(f"Request failed after {MAX_RETRIES} attempts: {exc}")
+                    raise
+                wait_time = RETRY_DELAY_SECONDS * attempt
+                print(
+                    "Request error: "
+                    f"{exc}. Retrying in {wait_time}s ({attempt}/{MAX_RETRIES})..."
+                )
+                time.sleep(wait_time)
 
-        response.raise_for_status()  # Check for HTTP errors (e.g., 401, 403, 404, 500)
         data = response.json()
 
-        print(f"API Response - Page: {data.get('page')}, Total Results: {data.get('total_results')}")
+        print(
+            "API Response - Page: "
+            f"{data.get('page')}, Total Results: {data.get('total_results')}"
+        )
         media_items = data.get("media", [])
         print(f"API Response - Media items on this page: {len(media_items)}")
         if data.get('next_page'):
@@ -55,7 +77,11 @@ def fetch_photos_from_collection(collection_id):
                 if photo_src:
                     photo_urls.append(photo_src)
                 else:
-                    print(f"Warning: Photo with ID {item.get('id')} does not have size '{PHOTO_SIZE}'. Available sizes: {list(item.get('src', {}).keys())}")
+                    print(
+                        "Warning: Photo with ID "
+                        f"{item.get('id')} does not have size '{PHOTO_SIZE}'. Available "
+                        f"sizes: {list(item.get('src', {}).keys())}"
+                    )
         
         api_url_to_fetch = data.get('next_page')
 
