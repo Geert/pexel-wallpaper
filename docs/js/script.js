@@ -40,6 +40,8 @@ const usageIndicator = document.getElementById("usage-indicator");
 
 let settingsUIVisible = false;
 const usageSourceState = { key: null, label: "", display: "" };
+const SETUP_SEEN_PREFIX = "pexelWallpaperSetupSeen_";
+const firstVisitHandledKeys = new Set();
 
 if (typeof window !== "undefined") {
     window.wallpaperUsageSource = usageSourceState;
@@ -79,7 +81,39 @@ async function loadTranslations() {
                 "usageLivelyWindows": "Lively on Windows",
                 "usageBrowserMac": "Browser on macOS",
                 "usageBrowserWindows": "Browser on Windows",
-                "usageBrowserOther": "Browser"
+                "usageBrowserOther": "Browser",
+                "instructions": {
+                    "mac": {
+                        "step1Prefix": "Install Plash:",
+                        "step1LinkText": "Open Plash in App Store",
+                        "step1LinkHref": "https://apps.apple.com/app/plash/id1494023538",
+                        "step1LinkClass": "setup-button plash-button",
+                        "step2Prefix": "In Plash, under 'Websites', add this URL:",
+                        "step3": "Enable Browsing Mode in Plash and continue via the screen on your desktop.",
+                        "step4": "Enter your Pexels API key below.",
+                        "step5": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen."
+                    },
+                    "windows": {
+                        "step1Prefix": "Install Lively Wallpaper:",
+                        "step1LinkText": "Open Lively in Microsoft Store",
+                        "step1LinkHref": "https://apps.microsoft.com/detail/9NTM2QC6QWS7",
+                        "step1LinkClass": "setup-button plash-button",
+                        "step2Prefix": "In Lively, choose the '+' button and add this URL:",
+                        "step3": "Apply the wallpaper in Lively so it runs on your desktop.",
+                        "step4": "Enter your Pexels API key below.",
+                        "step5": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen."
+                    },
+                    "other": {
+                        "step1Prefix": "Open this wallpaper in your browser:",
+                        "step1LinkText": "Bookmark this page",
+                        "step1LinkHref": "https://geert.github.io/pexel-wallpaper/",
+                        "step1LinkClass": "setup-button plash-button",
+                        "step2Prefix": "Add this URL to your preferred wallpaper app:",
+                        "step3": "Keep this page running so the slideshow stays active.",
+                        "step4": "Enter your Pexels API key below.",
+                        "step5": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen."
+                    }
+                }
                 // Add more essential fallbacks if necessary
             }
         };
@@ -111,29 +145,6 @@ function translatePage() {
     const formTitleElement = document.querySelector('#input-container h2');
     if (formTitleElement) formTitleElement.textContent = currentTranslations.formTitle;
 
-    const instruction1Element = document.querySelector('#input-container ol li:nth-child(1)');
-    if (instruction1Element) {
-        const plashLink = instruction1Element.querySelector('a');
-        instruction1Element.childNodes[0].nodeValue = currentTranslations.instruction1 + ' ';
-        if (plashLink) plashLink.textContent = currentTranslations.plashButtonText;
-    }
-
-    const instruction2_1Element = document.querySelector('#input-container ol li:nth-child(2)');
-    if (instruction2_1Element) {
-        const codeElement = instruction2_1Element.querySelector('code');
-        instruction2_1Element.childNodes[0].nodeValue = currentTranslations.instruction2_1 + ' ';
-        if (codeElement) { /* Current URL is dynamic, no text to translate here via var */ }
-    }
-
-    const instruction2_2Element = document.querySelector('#input-container ol li:nth-child(3)');
-    if (instruction2_2Element) instruction2_2Element.textContent = currentTranslations.instruction2_2;
-
-    const instruction3Element = document.querySelector('#input-container ol li:nth-child(4)');
-    if (instruction3Element) instruction3Element.textContent = currentTranslations.instruction3;
-
-    const instruction4Element = document.querySelector('#input-container ol li:nth-child(5)');
-    if (instruction4Element) instruction4Element.textContent = currentTranslations.instruction4;
-
     const apiKeyLabelElement = document.querySelector('label[for="apiKeyInput"]');
     if (apiKeyLabelElement) {
         apiKeyLabelElement.childNodes[0].nodeValue = currentTranslations.apiKeyLabel + ' ';
@@ -152,6 +163,7 @@ function translatePage() {
 
     // Translate alt texts for wallpaper (dynamic, set elsewhere via updateWallpaperAltText)
     // Translate status messages (dynamic, set via showStatus)
+    applyInstructionsForUsage();
     updateUsageIndicator(true);
     observePlashClass();
 }
@@ -214,6 +226,117 @@ function observePlashClass() {
     plashClassObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 }
 
+function mapUsageKeyToInstructionGroup(usageKey) {
+    switch (usageKey) {
+        case "usagePlashMac":
+        case "usageBrowserMac":
+            return "mac";
+        case "usageLivelyWindows":
+        case "usageBrowserWindows":
+            return "windows";
+        default:
+            return "other";
+    }
+}
+
+function applyInstructionsForUsage() {
+    if (!currentTranslations) return;
+
+    const instructionsByUsage = currentTranslations.instructions;
+    if (!instructionsByUsage) return;
+
+    const usageKey = usageSourceState.key || detectUsageEnvironmentKey();
+    const instructionGroupKey = mapUsageKeyToInstructionGroup(usageKey);
+    const instructions = instructionsByUsage[instructionGroupKey] || instructionsByUsage.other || instructionsByUsage.mac;
+    if (!instructions) return;
+
+    const step1Element = document.querySelector('#input-container ol li:nth-child(1)');
+    if (step1Element) {
+        const existingLink = step1Element.querySelector('a') || document.createElement('a');
+        step1Element.textContent = '';
+
+        if (instructions.step1Prefix) {
+            step1Element.appendChild(document.createTextNode(`${instructions.step1Prefix} `));
+        }
+
+        existingLink.textContent = instructions.step1LinkText || '';
+        if (instructions.step1LinkHref) {
+            existingLink.href = instructions.step1LinkHref;
+        }
+        existingLink.target = instructions.step1LinkTarget || '_blank';
+        existingLink.rel = instructions.step1LinkRel || 'noopener noreferrer';
+
+        if (instructions.step1LinkClass) {
+            existingLink.className = instructions.step1LinkClass;
+        } else if (!existingLink.className) {
+            existingLink.className = 'plash-button';
+        }
+
+        step1Element.appendChild(existingLink);
+    }
+
+    const step2Element = document.querySelector('#input-container ol li:nth-child(2)');
+    const urlCodeElement = document.getElementById('current-url-display');
+    if (step2Element && urlCodeElement) {
+        step2Element.textContent = '';
+        if (instructions.step2Prefix) {
+            step2Element.appendChild(document.createTextNode(`${instructions.step2Prefix} `));
+        }
+        step2Element.appendChild(urlCodeElement);
+        if (instructions.step2Suffix) {
+            step2Element.appendChild(document.createTextNode(` ${instructions.step2Suffix}`));
+        }
+    }
+
+    const step3Element = document.querySelector('#input-container ol li:nth-child(3)');
+    if (step3Element && instructions.step3) {
+        step3Element.textContent = instructions.step3;
+    }
+
+    const step4Element = document.querySelector('#input-container ol li:nth-child(4)');
+    if (step4Element && instructions.step4) {
+        step4Element.textContent = instructions.step4;
+    }
+
+    const step5Element = document.querySelector('#input-container ol li:nth-child(5)');
+    if (step5Element && instructions.step5) {
+        step5Element.textContent = instructions.step5;
+    }
+}
+
+function getSetupStorageKey(usageKey) {
+    return `${SETUP_SEEN_PREFIX}${usageKey || 'unknown'}`;
+}
+
+function handleFirstVisitFlow() {
+    const usageKey = usageSourceState.key;
+    if (!usageKey || firstVisitHandledKeys.has(usageKey)) {
+        return;
+    }
+
+    firstVisitHandledKeys.add(usageKey);
+
+    const storageKey = getSetupStorageKey(usageKey);
+    let hasSeenSetup = false;
+
+    try {
+        hasSeenSetup = localStorage.getItem(storageKey) === 'true';
+    } catch (error) {
+        console.warn('Unable to access localStorage for setup tracking:', error);
+    }
+
+    if (!hasSeenSetup) {
+        if (typeof showSettingsForm === 'function') {
+            showSettingsForm();
+        }
+        try {
+            localStorage.setItem(storageKey, 'true');
+        } catch (error) {
+            console.warn('Unable to persist setup tracking flag:', error);
+        }
+    }
+}
+
 function updateUsageIndicator(forceUpdate = false) {
     if (!usageIndicator || !currentTranslations) return;
 
@@ -234,6 +357,8 @@ function updateUsageIndicator(forceUpdate = false) {
     usageSourceState.label = labelValue;
     usageSourceState.display = newLabel;
 
+    applyInstructionsForUsage();
+    handleFirstVisitFlow();
     applyUsageIndicatorVisibility();
 }
 

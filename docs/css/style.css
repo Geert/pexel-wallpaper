@@ -101,6 +101,7 @@ body, html {
 #closeFormButton:hover {
     color: #333;
 }
+.setup-button,
 .plash-button {
     display: inline-block;
     padding: 8px 15px;
@@ -113,6 +114,7 @@ body, html {
     text-align: center;
     transition: background-color 0.2s ease;
 }
+.setup-button:hover,
 .plash-button:hover {
     background-color: #005ecb;
     color: white;
