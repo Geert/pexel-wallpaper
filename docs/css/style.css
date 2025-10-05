@@ -119,6 +119,14 @@ body, html {
     background-color: #005ecb;
     color: white;
 }
+.collection-link {
+    color: inherit;
+    text-decoration: underline;
+}
+.collection-link:hover,
+.collection-link:focus {
+    color: #80b3ff;
+}
 #input-container ol {
     text-align: left;
     margin-left: 20px;

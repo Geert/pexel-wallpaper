@@ -90,8 +90,12 @@ async function loadTranslations() {
                         "step1LinkClass": "setup-button plash-button",
                         "step2Prefix": "In Plash, under 'Websites', add this URL:",
                         "step3": "Enable Browsing Mode in Plash and continue via the screen on your desktop.",
-                        "step4": "Enter your Pexels API key below.",
-                        "step5": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen."
+                        "step4Prefix": "By default, wallpapers from ",
+                        "step4LinkText": "Pexels Wallpaper Collection",
+                        "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                        "step4LinkClass": "collection-link",
+                        "step4Suffix": " are shown.",
+                        "step5": "To use another collection, enter your Pexels API key and paste that collection URL below."
                     },
                     "windows": {
                         "step1Prefix": "Install Lively Wallpaper:",
@@ -100,8 +104,12 @@ async function loadTranslations() {
                         "step1LinkClass": "setup-button plash-button",
                         "step2Prefix": "In Lively, choose the '+' button and add this URL:",
                         "step3": "Apply the wallpaper in Lively so it runs on your desktop.",
-                        "step4": "Enter your Pexels API key below.",
-                        "step5": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen."
+                        "step4Prefix": "By default, wallpapers from ",
+                        "step4LinkText": "Pexels Wallpaper Collection",
+                        "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                        "step4LinkClass": "collection-link",
+                        "step4Suffix": " are shown.",
+                        "step5": "To use another collection, enter your Pexels API key and paste that collection URL below."
                     },
                     "other": {
                         "step1Prefix": "Open this wallpaper in your browser:",
@@ -110,8 +118,12 @@ async function loadTranslations() {
                         "step1LinkClass": "setup-button plash-button",
                         "step2Prefix": "Add this URL to your preferred wallpaper app:",
                         "step3": "Keep this page running so the slideshow stays active.",
-                        "step4": "Enter your Pexels API key below.",
-                        "step5": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen."
+                        "step4Prefix": "By default, wallpapers from ",
+                        "step4LinkText": "Pexels Wallpaper Collection",
+                        "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                        "step4LinkClass": "collection-link",
+                        "step4Suffix": " are shown.",
+                        "step5": "To use another collection, enter your Pexels API key and paste that collection URL below."
                     }
                 }
                 // Add more essential fallbacks if necessary
@@ -163,12 +175,23 @@ function translatePage() {
 
     // Translate alt texts for wallpaper (dynamic, set elsewhere via updateWallpaperAltText)
     // Translate status messages (dynamic, set via showStatus)
+    updateCurrentUrlDisplay();
     applyInstructionsForUsage();
     updateUsageIndicator(true);
     observePlashClass();
 }
 
 let plashClassObserver = null;
+
+function updateCurrentUrlDisplay() {
+    const urlDisplay = document.getElementById('current-url-display');
+    if (!urlDisplay) return;
+
+    const currentUrl = window.location.href;
+    if (urlDisplay.textContent !== currentUrl) {
+        urlDisplay.textContent = currentUrl;
+    }
+}
 
 function applyUsageIndicatorVisibility() {
     if (!usageIndicator) return;
@@ -282,6 +305,7 @@ function applyInstructionsForUsage() {
         if (instructions.step2Prefix) {
             step2Element.appendChild(document.createTextNode(`${instructions.step2Prefix} `));
         }
+        updateCurrentUrlDisplay();
         step2Element.appendChild(urlCodeElement);
         if (instructions.step2Suffix) {
             step2Element.appendChild(document.createTextNode(` ${instructions.step2Suffix}`));
@@ -294,8 +318,27 @@ function applyInstructionsForUsage() {
     }
 
     const step4Element = document.querySelector('#input-container ol li:nth-child(4)');
-    if (step4Element && instructions.step4) {
-        step4Element.textContent = instructions.step4;
+    if (step4Element) {
+        step4Element.textContent = '';
+        if (instructions.step4LinkHref) {
+            if (instructions.step4Prefix) {
+                step4Element.appendChild(document.createTextNode(instructions.step4Prefix));
+            }
+            const link = document.createElement('a');
+            link.href = instructions.step4LinkHref;
+            link.textContent = instructions.step4LinkText || instructions.step4LinkHref;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            if (instructions.step4LinkClass) {
+                link.className = instructions.step4LinkClass;
+            }
+            step4Element.appendChild(link);
+            if (instructions.step4Suffix) {
+                step4Element.appendChild(document.createTextNode(instructions.step4Suffix));
+            }
+        } else if (instructions.step4) {
+            step4Element.textContent = instructions.step4;
+        }
     }
 
     const step5Element = document.querySelector('#input-container ol li:nth-child(5)');
@@ -529,7 +572,7 @@ async function initializeSlideshow(apiKey, collectionId, collectionFullUrl) {
     stopDefaultSlideshow();
     statusOverlay.classList.remove("hidden");
     statusOverlay.textContent = currentTranslations.statusLoading;
-    document.getElementById("current-url-display").textContent = window.location.href; // Display current URL
+    updateCurrentUrlDisplay(); // Display current URL
 
     let fetchedUrls = getCachedPhotoUrls(collectionId);
 

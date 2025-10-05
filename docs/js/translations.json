@@ -47,8 +47,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "In Plash, under 'Websites', add this URL:",
                 "step3": "Enable Browsing Mode in Plash and continue via the screen on your desktop.",
-                "step4": "Enter your Pexels API key below.",
-                "step5": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen."
+                "step4Prefix": "By default, wallpapers from ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": " are shown.",
+                "step5": "To use another collection, enter your Pexels API key and paste that collection URL below."
             },
             "windows": {
                 "step1Prefix": "Install Lively Wallpaper:",
@@ -57,8 +61,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "In Lively, choose the '+' button and add this URL:",
                 "step3": "Apply the wallpaper in Lively so it runs on your desktop.",
-                "step4": "Enter your Pexels API key below.",
-                "step5": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen."
+                "step4Prefix": "By default, wallpapers from ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": " are shown.",
+                "step5": "To use another collection, enter your Pexels API key and paste that collection URL below."
             },
             "other": {
                 "step1Prefix": "Open this wallpaper in your browser:",
@@ -67,8 +75,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "Add this URL to your preferred wallpaper app:",
                 "step3": "Keep this page running so the slideshow stays active.",
-                "step4": "Enter your Pexels API key below.",
-                "step5": "Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen."
+                "step4Prefix": "By default, wallpapers from ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": " are shown.",
+                "step5": "To use another collection, enter your Pexels API key and paste that collection URL below."
             }
         }
     },
@@ -120,8 +132,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "Voeg in Plash bij 'Websites' deze URL toe:",
                 "step3": "Zet in Plash Browsing mode aan en ga verder via het scherm op je bureaublad.",
-                "step4": "Vul hieronder je Pexels API-sleutel in.",
-                "step5": "Plak hieronder de URL van een Pexels Collectie waaruit je achtergronden gekozen worden."
+                "step4Prefix": "Standaard zie je achtergronden uit ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": ".",
+                "step5": "Wil je een andere collectie? Vul hieronder je Pexels API-sleutel in en plak de URL van die collectie."
             },
             "windows": {
                 "step1Prefix": "Installeer Lively Wallpaper:",
@@ -130,8 +146,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "Kies in Lively de '+'-knop en voeg deze URL toe:",
                 "step3": "Activeer de wallpaper in Lively zodat hij op je bureaublad draait.",
-                "step4": "Vul hieronder je Pexels API-sleutel in.",
-                "step5": "Plak hieronder de URL van een Pexels Collectie waaruit je achtergronden gekozen worden."
+                "step4Prefix": "Standaard zie je achtergronden uit ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": ".",
+                "step5": "Wil je een andere collectie? Vul hieronder je Pexels API-sleutel in en plak de URL van die collectie."
             },
             "other": {
                 "step1Prefix": "Open deze wallpaper in je browser:",
@@ -140,8 +160,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "Voeg deze URL toe aan jouw favoriete wallpaper-app:",
                 "step3": "Laat deze pagina draaien zodat de diavoorstelling actief blijft.",
-                "step4": "Vul hieronder je Pexels API-sleutel in.",
-                "step5": "Plak hieronder de URL van een Pexels Collectie waaruit je achtergronden gekozen worden."
+                "step4Prefix": "Standaard zie je achtergronden uit ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": ".",
+                "step5": "Wil je een andere collectie? Vul hieronder je Pexels API-sleutel in en plak de URL van die collectie."
             }
         }
     },
@@ -193,8 +217,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "Fügen Sie in Plash unter 'Websites' diese URL hinzu:",
                 "step3": "Aktivieren Sie den Browsing-Modus in Plash und fahren Sie über den Bildschirm auf Ihrem Desktop fort.",
-                "step4": "Geben Sie unten Ihren Pexels API-Schlüssel ein.",
-                "step5": "Fügen Sie unten die URL einer Pexels-Sammlung ein, aus der Ihre Hintergrundbilder ausgewählt werden."
+                "step4Prefix": "Standardmäßig werden Hintergrundbilder von ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": " angezeigt.",
+                "step5": "Für eine andere Sammlung gib deinen Pexels-API-Schlüssel ein und füge die URL dieser Sammlung unten ein."
             },
             "windows": {
                 "step1Prefix": "Installieren Sie Lively Wallpaper:",
@@ -203,8 +231,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "Wählen Sie in Lively die Schaltfläche '+' und fügen Sie diese URL hinzu:",
                 "step3": "Aktivieren Sie das Hintergrundbild in Lively, damit es auf Ihrem Desktop läuft.",
-                "step4": "Geben Sie unten Ihren Pexels API-Schlüssel ein.",
-                "step5": "Fügen Sie unten die URL einer Pexels-Sammlung ein, aus der Ihre Hintergrundbilder ausgewählt werden."
+                "step4Prefix": "Standardmäßig werden Hintergrundbilder von ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": " angezeigt.",
+                "step5": "Für eine andere Sammlung gib deinen Pexels-API-Schlüssel ein und füge die URL dieser Sammlung unten ein."
             },
             "other": {
                 "step1Prefix": "Öffnen Sie dieses Hintergrundbild im Browser:",
@@ -213,8 +245,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "Fügen Sie diese URL zu Ihrer bevorzugten Wallpaper-App hinzu:",
                 "step3": "Lassen Sie diese Seite geöffnet, damit die Diashow aktiv bleibt.",
-                "step4": "Geben Sie unten Ihren Pexels API-Schlüssel ein.",
-                "step5": "Fügen Sie unten die URL einer Pexels-Sammlung ein, aus der Ihre Hintergrundbilder ausgewählt werden."
+                "step4Prefix": "Standardmäßig werden Hintergrundbilder von ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": " angezeigt.",
+                "step5": "Für eine andere Sammlung gib deinen Pexels-API-Schlüssel ein und füge die URL dieser Sammlung unten ein."
             }
         }
     },
@@ -266,8 +302,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "Dans Plash, sous 'Sites Web', ajoutez cette URL :",
                 "step3": "Activez le mode de navigation dans Plash et continuez via l'écran de votre bureau.",
-                "step4": "Saisissez votre clé API Pexels ci-dessous.",
-                "step5": "Collez ci-dessous l'URL d'une collection Pexels à partir de laquelle vos fonds d'écran seront choisis."
+                "step4Prefix": "Par défaut, les fonds d'écran proviennent de ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": ".",
+                "step5": "Pour utiliser une autre collection, saisissez votre clé API Pexels et collez l'URL de cette collection ci-dessous."
             },
             "windows": {
                 "step1Prefix": "Installez Lively Wallpaper :",
@@ -276,8 +316,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "Dans Lively, cliquez sur le bouton '+' et ajoutez cette URL :",
                 "step3": "Appliquez le fond d'écran dans Lively pour qu'il s'exécute sur votre bureau.",
-                "step4": "Saisissez votre clé API Pexels ci-dessous.",
-                "step5": "Collez ci-dessous l'URL d'une collection Pexels à partir de laquelle vos fonds d'écran seront choisis."
+                "step4Prefix": "Par défaut, les fonds d'écran proviennent de ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": ".",
+                "step5": "Pour utiliser une autre collection, saisissez votre clé API Pexels et collez l'URL de cette collection ci-dessous."
             },
             "other": {
                 "step1Prefix": "Ouvrez ce fond d'écran dans votre navigateur :",
@@ -286,8 +330,12 @@
                 "step1LinkClass": "setup-button plash-button",
                 "step2Prefix": "Ajoutez cette URL à votre application de fonds d'écran préférée :",
                 "step3": "Laissez cette page ouverte pour que le diaporama reste actif.",
-                "step4": "Saisissez votre clé API Pexels ci-dessous.",
-                "step5": "Collez ci-dessous l'URL d'une collection Pexels à partir de laquelle vos fonds d'écran seront choisis."
+                "step4Prefix": "Par défaut, les fonds d'écran proviennent de ",
+                "step4LinkText": "Pexels Wallpaper Collection",
+                "step4LinkHref": "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek/",
+                "step4LinkClass": "collection-link",
+                "step4Suffix": ".",
+                "step5": "Pour utiliser une autre collection, saisissez votre clé API Pexels et collez l'URL de cette collection ci-dessous."
             }
         }
     }
