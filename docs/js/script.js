@@ -38,6 +38,13 @@ const inputError = document.getElementById("input-error");
 const closeFormButton = document.getElementById("closeFormButton");
 const usageIndicator = document.getElementById("usage-indicator");
 
+let settingsUIVisible = false;
+const usageSourceState = { key: null, label: "", display: "" };
+
+if (typeof window !== "undefined") {
+    window.wallpaperUsageSource = usageSourceState;
+}
+
 // --- Functions ---
 function getBrowserLanguage() {
     const lang = navigator.language || navigator.userLanguage || 'us';
@@ -151,6 +158,16 @@ function translatePage() {
 
 let plashClassObserver = null;
 
+function applyUsageIndicatorVisibility() {
+    if (!usageIndicator) return;
+
+    if (settingsUIVisible && usageIndicator.textContent.trim() !== "") {
+        usageIndicator.classList.remove("hidden");
+    } else {
+        usageIndicator.classList.add("hidden");
+    }
+}
+
 function detectUsageEnvironmentKey() {
     const ua = (navigator.userAgent || "").toLowerCase();
     const platform = (navigator.platform || "").toLowerCase();
@@ -209,12 +226,15 @@ function updateUsageIndicator(forceUpdate = false) {
     const prefixText = labelPrefix ? `${labelPrefix.trim()}: ` : "";
     const newLabel = `${prefixText}${labelValue}`;
 
-    if (!forceUpdate && usageIndicator.textContent === newLabel && !usageIndicator.classList.contains("hidden")) {
-        return;
+    if (forceUpdate || usageIndicator.textContent !== newLabel) {
+        usageIndicator.textContent = newLabel;
     }
 
-    usageIndicator.textContent = newLabel;
-    usageIndicator.classList.remove("hidden");
+    usageSourceState.key = usageLabelKey;
+    usageSourceState.label = labelValue;
+    usageSourceState.display = newLabel;
+
+    applyUsageIndicatorVisibility();
 }
 
 function setCookie(name, value, days) {
@@ -564,6 +584,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             settingsButtonLabelForTimer.style.opacity = '1';
             settingsButtonLabelForTimer.style.visibility = 'visible';
         }
+        settingsUIVisible = true;
+        applyUsageIndicatorVisibility();
     };
 
     const hideButtonAndLabelAfterInactivity = () => {
@@ -575,6 +597,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             settingsButtonLabelForTimer.style.opacity = '0';
             settingsButtonLabelForTimer.style.visibility = 'hidden';
         }
+        settingsUIVisible = false;
+        applyUsageIndicatorVisibility();
     };
 
     const resetMouseInactivityTimer = () => {
