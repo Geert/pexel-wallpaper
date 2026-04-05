@@ -83,7 +83,10 @@ def fetch_photos_from_collection(collection_id):
                         f"sizes: {list(item.get('src', {}).keys())}"
                     )
         
-        api_url_to_fetch = data.get('next_page')
+        next_page = data.get('next_page')
+        if next_page:
+            next_page = next_page.replace("/v1/v1/", "/v1/")
+        api_url_to_fetch = next_page
 
     print(f"Finished fetching. Total photo URLs collected: {len(photo_urls)}") 
     return photo_urls
