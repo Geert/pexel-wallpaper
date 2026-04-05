@@ -416,8 +416,17 @@ function onPhotoChange({ entry, index, total, element }) {
     element.alt =
       entry.alt || `${t.wallpaperAltWallpaper} ${index + 1} ${t.wallpaperAltOf} ${total}`;
   }
-  showPhotoDescription(entry.alt);
+  hidePhotoDescription();
   updateUsageIndicator();
+}
+
+function togglePhotoDescription() {
+  const el = $('photo-description');
+  if (el?.classList.contains('visible')) {
+    hidePhotoDescription();
+  } else {
+    showPhotoDescription(currentAttribution?.alt);
+  }
 }
 
 // --- Event Listeners ---
@@ -425,6 +434,14 @@ function onPhotoChange({ entry, index, total, element }) {
 function attachEventListeners() {
   $('settingsButton')?.addEventListener('click', showSettingsForm);
   $('closeFormButton')?.addEventListener('click', hideSettingsForm);
+
+  // Show description on Play button (Samsung remote via postMessage) or 'i' key (browser)
+  window.addEventListener('message', (e) => {
+    if (e.data === 'show-description') togglePhotoDescription();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'i' || e.key === 'I') togglePhotoDescription();
+  });
 
   $('startButton')?.addEventListener('click', () => {
     const apiKey = $('apiKeyInput')?.value.trim();
