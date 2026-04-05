@@ -5,10 +5,7 @@ import time
 import requests
 from dotenv import load_dotenv
 
-COLLECTION_ID = "vmnecek"  # Default collection ID for automated runs
-# COLLECTION_ID = "xbncfpg"  # Default collection ID for automated runs
-
-
+COLLECTION_ID = "vmnecek"
 
 # --- CONFIGURATION ---
 # Make sure to set the PEXELS_API_KEY environment variable in your GitHub Secrets
@@ -28,7 +25,7 @@ RETRY_DELAY_SECONDS = 2
 
 HEADERS = {
     "Authorization": API_KEY,
-    "User-Agent": "curl/7.86.0"  # Example curl User-Agent, version might differ
+    "User-Agent": "PexelWallpaperDynamic/1.4 (github.com/geert/pexel-wallpaper)",
 }
 
 BASE_URL = "https://api.pexels.com/v1/"
@@ -45,13 +42,26 @@ def fetch_photos_from_collection(collection_id):
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 response = requests.get(api_url_to_fetch, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+                if response.status_code == 429:
+                    default_wait = RETRY_DELAY_SECONDS * attempt * 2
+                    wait_time = int(
+                        response.headers.get("Retry-After", default_wait)
+                    )
+                    print(
+                        f"Rate limited (429). Waiting {wait_time}s "
+                        f"before retry ({attempt}/{MAX_RETRIES})..."
+                    )
+                    time.sleep(wait_time)
+                    if attempt == MAX_RETRIES:
+                        response.raise_for_status()
+                    continue
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as exc:
                 if attempt == MAX_RETRIES:
                     print(f"Request failed after {MAX_RETRIES} attempts: {exc}")
                     raise
-                wait_time = RETRY_DELAY_SECONDS * attempt
+                wait_time = RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
                 print(
                     "Request error: "
                     f"{exc}. Retrying in {wait_time}s ({attempt}/{MAX_RETRIES})..."

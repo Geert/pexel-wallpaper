@@ -78,22 +78,6 @@ let allTranslations = FALLBACK_TRANSLATIONS;
 let currentTranslations = FALLBACK_TRANSLATIONS.us;
 let currentLang = 'us';
 
-export function getFallbackTranslations() {
-  return FALLBACK_TRANSLATIONS;
-}
-
-export function getCurrentTranslations() {
-  return currentTranslations;
-}
-
-export function getAllTranslations() {
-  return allTranslations;
-}
-
-export function getCurrentLanguage() {
-  return currentLang;
-}
-
 export function getBrowserLanguage() {
   const lang = navigator.language || navigator.userLanguage || 'us';
   return lang.split('-')[0].toLowerCase();

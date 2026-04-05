@@ -1,767 +1,457 @@
-import {
-  LOCAL_IMAGE_URLS_FILE,
-  CHANGE_INTERVAL_MS,
-  STORAGE_KEYS,
-  PEXELS_PAGE_BASE_URL,
-} from './config.mjs';
+import { LOCAL_IMAGE_URLS_FILE, CHANGE_INTERVAL_MS, STORAGE_KEYS } from './config.mjs';
 import {
   setStoredValue,
   getStoredValue,
   clearStoredValue,
   getDisplayUrl,
   sanitizeUrlInAddressBar,
+  cachePhotoUrls,
+  getCachedPhotoUrls,
 } from './storage.mjs';
 import { initStatusOverlay, showStatus, hideStatus } from './status.mjs';
 import { initializeTranslations } from './i18n.mjs';
 import {
+  Slideshow,
   fetchPhotosFromPexelsAPI,
   loadDefaultImageList,
-  getCachedRemoteUrls,
+  normalizeEntries,
+  getPexelsErrorMessage,
 } from './slideshow.mjs';
 
 document.documentElement.classList.add('js-enabled');
 
-// --- DOM Element References ---
-const wallpaperElement = document.getElementById('wallpaper');
-const statusOverlay = document.getElementById('status-overlay');
-const inputContainer = document.getElementById('input-container');
-const settingsButton = document.getElementById('settingsButton');
-const settingsButtonLabel = document.getElementById('settingsButtonLabel');
-const apiKeyInput = document.getElementById('apiKeyInput');
-const collectionUrlInput = document.getElementById('collectionUrlInput');
-const startButton = document.getElementById('startButton');
-const resetButton = document.getElementById('resetButton');
-const inputError = document.getElementById('input-error');
-const closeFormButton = document.getElementById('closeFormButton');
-const usageIndicator = document.getElementById('usage-indicator');
+// --- State ---
+let t = {};
+let slideshow;
+let uiVisible = false;
+let currentAttribution = null;
+let fetchController = null;
+let plashObserver = null;
 
-initStatusOverlay(statusOverlay);
+// --- DOM Helpers ---
+const $ = (id) => document.getElementById(id);
 
-// --- Global State ---
-let currentTranslations = {};
+// --- Environment Detection ---
 
-let images = [];
-let currentIndex = 0;
-let slideshowIntervalId = null;
-
-let defaultImages = [];
-let defaultCurrentIndex = 0;
-let defaultSlideshowIntervalId = null;
-
-const usageSourceState = { key: null, label: '', display: '' };
-const SETUP_SEEN_PREFIX = 'pexelWallpaperSetupSeen_';
-const firstVisitHandledKeys = new Set();
-let settingsUIVisible = false;
-let plashClassObserver = null;
-let currentPhotoAttribution = null;
-
-if (typeof window !== 'undefined') {
-  window.wallpaperUsageSource = usageSourceState;
-}
-
-function extractPexelsIdFromText(text) {
-  if (typeof text !== 'string') return null;
-  const slug = text.trim().replace(/\/$/, '');
-  const photoSlugMatch = slug.match(/\/photo\/(?:[^/]*-)?(\d+)(?:\/)?$/i);
-  if (photoSlugMatch && photoSlugMatch[1]) {
-    return photoSlugMatch[1];
-  }
-
-  const imagePathMatch = slug.match(/\/photos\/(\d+)(?:\/|$)/i);
-  if (imagePathMatch && imagePathMatch[1]) {
-    return imagePathMatch[1];
-  }
-
-  return null;
-}
-
-function updateCurrentUrlDisplay() {
-  const urlDisplay = document.getElementById('current-url-display');
-  if (!urlDisplay) return;
-
-  const currentUrl = getDisplayUrl();
-  if (urlDisplay.textContent !== currentUrl) {
-    urlDisplay.textContent = currentUrl;
-  }
-}
-
-function applyUsageIndicatorVisibility() {
-  if (!usageIndicator) return;
-
-  if (settingsUIVisible && usageIndicator.textContent.trim() !== '') {
-    usageIndicator.classList.remove('hidden');
-  } else {
-    usageIndicator.classList.add('hidden');
-  }
-}
-
-function normalizePhotoEntry(entry) {
-  if (!entry) return null;
-  if (typeof entry === 'string') {
-    const trimmed = entry.trim();
-    if (!trimmed) return null;
-    const derivedId = extractPexelsIdFromText(trimmed);
-    return {
-      imageUrl: trimmed,
-      pageUrl: derivedId
-        ? `${PEXELS_PAGE_BASE_URL}${derivedId}/`
-        : trimmed.includes('pexels.com')
-          ? trimmed
-          : null,
-      photographerUrl: null,
-    };
-  }
-
-  if (typeof entry === 'object') {
-    const imageUrl = entry.imageUrl || entry.src || entry.url;
-    if (!imageUrl) return null;
-    const derivedId =
-      entry.id ||
-      extractPexelsIdFromText(entry.pageUrl || '') ||
-      extractPexelsIdFromText(imageUrl || '');
-    return {
-      imageUrl,
-      pageUrl: entry.pageUrl || (derivedId ? `${PEXELS_PAGE_BASE_URL}${derivedId}/` : null),
-      photographerUrl: entry.photographerUrl || null,
-    };
-  }
-
-  return null;
-}
-
-function normalizePhotoEntryList(list) {
-  return (Array.isArray(list) ? list : []).map((item) => normalizePhotoEntry(item)).filter(Boolean);
-}
-
-function detectUsageEnvironmentKey() {
+function detectEnvironment() {
   const ua = (navigator.userAgent || '').toLowerCase();
   const platform = (navigator.platform || '').toLowerCase();
-
-  if (
-    typeof window.livelyPropertyListener === 'function' ||
-    (window.chrome && window.chrome.webview)
-  ) {
+  if (typeof window.livelyPropertyListener === 'function' || window.chrome?.webview) {
     return 'usageLivelyWindows';
   }
-
   if (document.documentElement.classList.contains('is-plash-app') || ua.includes('plash')) {
     return 'usagePlashMac';
   }
-
-  if (ua.includes('livelywallpaper')) {
-    return 'usageLivelyWindows';
-  }
-
-  const isMac = platform.includes('mac') || ua.includes('mac os') || ua.includes('macintosh');
-  const isWindows = platform.includes('win') || ua.includes('windows');
-
-  if (isMac) {
+  if (ua.includes('livelywallpaper')) return 'usageLivelyWindows';
+  if (platform.includes('mac') || ua.includes('mac os') || ua.includes('macintosh')) {
     return 'usageBrowserMac';
   }
-
-  if (isWindows) {
-    return 'usageBrowserWindows';
-  }
-
+  if (platform.includes('win') || ua.includes('windows')) return 'usageBrowserWindows';
   return 'usageBrowserOther';
 }
 
+function instructionGroup() {
+  const env = detectEnvironment();
+  if (env === 'usagePlashMac' || env === 'usageBrowserMac') return 'mac';
+  if (env === 'usageLivelyWindows' || env === 'usageBrowserWindows') return 'windows';
+  return 'other';
+}
+
+// --- Usage Indicator ---
+
+function updateUsageIndicator() {
+  const el = $('usage-indicator');
+  if (!el) return;
+  el.textContent = 'Photos provided by Pexels';
+  el.setAttribute(
+    'href',
+    currentAttribution?.pageUrl || currentAttribution?.imageUrl || 'https://www.pexels.com'
+  );
+  el.classList.toggle('hidden', !uiVisible);
+}
+
 function observePlashClass() {
-  if (plashClassObserver || !('MutationObserver' in window)) {
-    return;
-  }
-
-  plashClassObserver = new MutationObserver(() => {
+  if (plashObserver || !('MutationObserver' in window)) return;
+  plashObserver = new MutationObserver(() => {
     if (document.documentElement.classList.contains('is-plash-app')) {
+      applyInstructions();
       updateUsageIndicator();
-      plashClassObserver.disconnect();
-      plashClassObserver = null;
+      plashObserver.disconnect();
+      plashObserver = null;
     }
   });
+  plashObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+}
 
-  plashClassObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
+// --- Instruction Rendering ---
+
+function renderStepWithLink(el, prefix, link, suffix) {
+  if (!el) return;
+  el.textContent = '';
+  if (prefix) el.appendChild(document.createTextNode(prefix + ' '));
+  if (link?.href) {
+    const a = document.createElement('a');
+    a.href = link.href;
+    a.textContent = link.text || '';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    if (link.className) a.className = link.className;
+    el.appendChild(a);
+  }
+  if (suffix) el.appendChild(document.createTextNode(' ' + suffix));
+}
+
+function applyInstructions() {
+  const ins = t.instructions?.[instructionGroup()];
+  if (!ins) return;
+  const steps = document.querySelectorAll('#input-container ol li');
+
+  renderStepWithLink(steps[0], ins.step1Prefix, {
+    href: ins.step1LinkHref,
+    text: ins.step1LinkText,
+    className: ins.step1LinkClass,
   });
+
+  if (steps[1]) {
+    const urlEl = $('current-url-display');
+    steps[1].textContent = '';
+    if (ins.step2Prefix) steps[1].appendChild(document.createTextNode(ins.step2Prefix + ' '));
+    if (urlEl) {
+      urlEl.textContent = getDisplayUrl();
+      steps[1].appendChild(urlEl);
+    }
+    if (ins.step2Suffix) steps[1].appendChild(document.createTextNode(' ' + ins.step2Suffix));
+  }
+
+  if (steps[2] && ins.step3) steps[2].textContent = ins.step3;
+
+  if (ins.step4LinkHref) {
+    renderStepWithLink(
+      steps[3],
+      ins.step4Prefix,
+      { href: ins.step4LinkHref, text: ins.step4LinkText, className: ins.step4LinkClass },
+      ins.step4Suffix
+    );
+  } else if (steps[3] && ins.step4) {
+    steps[3].textContent = ins.step4;
+  }
+
+  if (steps[4] && ins.step5) steps[4].textContent = ins.step5;
 }
 
-function mapUsageKeyToInstructionGroup(usageKey) {
-  switch (usageKey) {
-    case 'usagePlashMac':
-    case 'usageBrowserMac':
-      return 'mac';
-    case 'usageLivelyWindows':
-    case 'usageBrowserWindows':
-      return 'windows';
-    default:
-      return 'other';
-  }
-}
-
-function applyInstructionsForUsage() {
-  if (!currentTranslations) return;
-
-  const instructionsByUsage = currentTranslations.instructions;
-  if (!instructionsByUsage) return;
-
-  const usageKey = usageSourceState.key || detectUsageEnvironmentKey();
-  const instructionGroupKey = mapUsageKeyToInstructionGroup(usageKey);
-  const instructions =
-    instructionsByUsage[instructionGroupKey] ||
-    instructionsByUsage.other ||
-    instructionsByUsage.mac;
-  if (!instructions) return;
-
-  const step1Element = document.querySelector('#input-container ol li:nth-child(1)');
-  if (step1Element) {
-    const existingLink = step1Element.querySelector('a') || document.createElement('a');
-    step1Element.textContent = '';
-
-    if (instructions.step1Prefix) {
-      step1Element.appendChild(document.createTextNode(`${instructions.step1Prefix} `));
-    }
-
-    existingLink.textContent = instructions.step1LinkText || '';
-    if (instructions.step1LinkHref) {
-      existingLink.href = instructions.step1LinkHref;
-    }
-    existingLink.target = instructions.step1LinkTarget || '_blank';
-    existingLink.rel = instructions.step1LinkRel || 'noopener noreferrer';
-
-    if (instructions.step1LinkClass) {
-      existingLink.className = instructions.step1LinkClass;
-    } else if (!existingLink.className) {
-      existingLink.className = 'plash-button';
-    }
-
-    step1Element.appendChild(existingLink);
-  }
-
-  const step2Element = document.querySelector('#input-container ol li:nth-child(2)');
-  const urlCodeElement = document.getElementById('current-url-display');
-  if (step2Element && urlCodeElement) {
-    step2Element.textContent = '';
-    if (instructions.step2Prefix) {
-      step2Element.appendChild(document.createTextNode(`${instructions.step2Prefix} `));
-    }
-    updateCurrentUrlDisplay();
-    step2Element.appendChild(urlCodeElement);
-    if (instructions.step2Suffix) {
-      step2Element.appendChild(document.createTextNode(` ${instructions.step2Suffix}`));
-    }
-  }
-
-  const step3Element = document.querySelector('#input-container ol li:nth-child(3)');
-  if (step3Element && instructions.step3) {
-    step3Element.textContent = instructions.step3;
-  }
-
-  const step4Element = document.querySelector('#input-container ol li:nth-child(4)');
-  if (step4Element) {
-    step4Element.textContent = '';
-    if (instructions.step4LinkHref) {
-      if (instructions.step4Prefix) {
-        step4Element.appendChild(document.createTextNode(instructions.step4Prefix));
-      }
-      const link = document.createElement('a');
-      link.href = instructions.step4LinkHref;
-      link.textContent = instructions.step4LinkText || instructions.step4LinkHref;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      if (instructions.step4LinkClass) {
-        link.className = instructions.step4LinkClass;
-      }
-      step4Element.appendChild(link);
-      if (instructions.step4Suffix) {
-        step4Element.appendChild(document.createTextNode(instructions.step4Suffix));
-      }
-    } else if (instructions.step4) {
-      step4Element.textContent = instructions.step4;
-    }
-  }
-
-  const step5Element = document.querySelector('#input-container ol li:nth-child(5)');
-  if (step5Element && instructions.step5) {
-    step5Element.textContent = instructions.step5;
-  }
-}
-
-function updateUsageIndicator(forceUpdate = false) {
-  if (!usageIndicator) return;
-
-  const usageKey = detectUsageEnvironmentKey();
-  const linkLabel = 'Photos provided by Pexels';
-  const fallbackLink = 'https://www.pexels.com';
-  const linkTarget =
-    (currentPhotoAttribution &&
-      (currentPhotoAttribution.pageUrl || currentPhotoAttribution.imageUrl)) ||
-    fallbackLink;
-  const currentHref = usageIndicator.getAttribute('href') || '';
-
-  if (
-    !forceUpdate &&
-    usageIndicator.textContent === linkLabel &&
-    currentHref === linkTarget &&
-    !usageIndicator.classList.contains('hidden')
-  ) {
-    usageSourceState.key = usageKey;
-  } else {
-    usageIndicator.textContent = linkLabel;
-    usageIndicator.setAttribute('href', linkTarget);
-    usageIndicator.setAttribute('target', '_blank');
-    usageIndicator.setAttribute('rel', 'noopener noreferrer');
-
-    usageSourceState.key = usageKey;
-    usageSourceState.label = linkLabel;
-    usageSourceState.display = linkLabel;
-  }
-
-  applyInstructionsForUsage();
-  handleFirstVisitFlow();
-  applyUsageIndicatorVisibility();
-}
-
-function updateWallpaperAltText() {
-  if (!wallpaperElement || !currentTranslations) {
-    return;
-  }
-
-  if (images.length > 0) {
-    const displayedIndex = currentIndex === 0 ? images.length : currentIndex;
-    wallpaperElement.alt = `${currentTranslations.wallpaperAltWallpaper} ${displayedIndex} ${currentTranslations.wallpaperAltOf} ${images.length}`;
-    return;
-  }
-
-  if (defaultImages.length > 0) {
-    const displayedIndex = defaultCurrentIndex === 0 ? defaultImages.length : defaultCurrentIndex;
-    wallpaperElement.alt = `${currentTranslations.wallpaperAltWallpaper} (Default) ${displayedIndex} ${currentTranslations.wallpaperAltOf} ${defaultImages.length}`;
-    return;
-  }
-
-  wallpaperElement.alt =
-    currentTranslations.wallpaperAltConfigure || 'Configure API Key and Collection URL.';
-}
-
-function getSetupStorageKey(usageKey) {
-  return `${SETUP_SEEN_PREFIX}${usageKey || 'unknown'}`;
-}
-
-function handleFirstVisitFlow() {
-  const usageKey = usageSourceState.key;
-  if (!usageKey || firstVisitHandledKeys.has(usageKey)) {
-    return;
-  }
-
-  firstVisitHandledKeys.add(usageKey);
-
-  const storageKey = getSetupStorageKey(usageKey);
-  let hasSeenSetup = false;
-
-  try {
-    hasSeenSetup = localStorage.getItem(storageKey) === 'true';
-  } catch (error) {
-    console.warn('Unable to access localStorage for setup tracking:', error);
-  }
-
-  if (!hasSeenSetup) {
-    showSettingsForm();
-    try {
-      localStorage.setItem(storageKey, 'true');
-    } catch (error) {
-      console.warn('Unable to persist setup tracking flag:', error);
-    }
-  }
-}
+// --- Settings Form ---
 
 function showSettingsForm() {
-  if (slideshowIntervalId) {
-    clearInterval(slideshowIntervalId);
-    slideshowIntervalId = null;
-    console.log(currentTranslations.slideshowPaused);
+  slideshow?.pause();
+  const apiKeyInput = $('apiKeyInput');
+  const collectionUrlInput = $('collectionUrlInput');
+  if (apiKeyInput) apiKeyInput.value = getStoredValue(STORAGE_KEYS.apiKey) || '';
+  if (collectionUrlInput) {
+    collectionUrlInput.value = getStoredValue(STORAGE_KEYS.lastCollectionUrl) || '';
   }
-  apiKeyInput.value = getStoredValue(STORAGE_KEYS.apiKey) || '';
-  collectionUrlInput.value = getStoredValue(STORAGE_KEYS.lastCollectionUrl) || '';
-  inputError.textContent = '';
-  inputContainer.classList.remove('hidden');
+  const inputError = $('input-error');
+  if (inputError) inputError.textContent = '';
+  $('input-container')?.classList.remove('hidden');
   hideStatus();
-  wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
+  document.removeEventListener('keydown', handleEscKey);
   document.addEventListener('keydown', handleEscKey);
 }
 
 function hideSettingsForm() {
-  inputContainer.classList.add('hidden');
+  $('input-container')?.classList.add('hidden');
   document.removeEventListener('keydown', handleEscKey);
-  if (images.length > 0 && !slideshowIntervalId) {
-    slideshowIntervalId = setInterval(setWallpaper, CHANGE_INTERVAL_MS);
-    console.log(currentTranslations.slideshowResumed);
-  }
+  slideshow?.resume();
 }
 
-function handleEscKey(event) {
-  if (event.key === 'Escape' && !inputContainer.classList.contains('hidden')) {
+function handleEscKey(e) {
+  if (e.key === 'Escape' && !$('input-container')?.classList.contains('hidden')) {
     hideSettingsForm();
   }
 }
 
-function setWallpaper() {
-  if (images.length === 0) return;
-  const entry = normalizePhotoEntry(images[currentIndex]);
-  if (!entry) return;
-
-  wallpaperElement.src = entry.imageUrl;
-  wallpaperElement.alt = `${currentTranslations.wallpaperAltWallpaper} ${currentIndex + 1} ${currentTranslations.wallpaperAltOf} ${images.length}`;
-  currentPhotoAttribution = entry;
-  currentIndex = (currentIndex + 1) % images.length;
-  if (currentIndex === 0) {
-    shuffleArray(images);
-  }
-  updateUsageIndicator(true);
+function clearSettings() {
+  fetchController?.abort();
+  slideshow?.stop();
+  clearStoredValue(STORAGE_KEYS.apiKey);
+  clearStoredValue(STORAGE_KEYS.collectionId);
+  clearStoredValue(STORAGE_KEYS.lastCollectionUrl);
+  currentAttribution = null;
+  updateUsageIndicator();
+  showSettingsForm();
 }
 
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-}
+// --- Data Loading ---
 
-async function initializeSlideshow(apiKey, collectionId) {
-  stopDefaultSlideshow();
-  updateCurrentUrlDisplay();
+async function loadFromAPI(apiKey, collectionId) {
+  fetchController?.abort();
+  fetchController = new AbortController();
+  const { signal } = fetchController;
 
-  let fetchedUrls = getCachedRemoteUrls(collectionId);
-
-  if (!fetchedUrls) {
-    fetchedUrls = await fetchPhotosFromPexelsAPI({
-      apiKey,
-      collectionId,
-      currentTranslations,
-      wallpaperElement,
-      showStatus,
-    });
-  } else {
-    const cachedMessage = `${fetchedUrls.length} ${currentTranslations.wallpaperAltWallpaper} (cached). ${currentTranslations.slideshowResumed}...`;
-    showStatus(cachedMessage, false, { duration: 1500 });
-  }
-
-  const normalizedEntries = normalizePhotoEntryList(fetchedUrls);
-
-  if (normalizedEntries.length > 0) {
-    images = normalizedEntries;
-    shuffleArray(images);
-    currentIndex = 0;
-    setWallpaper();
-    if (slideshowIntervalId) clearInterval(slideshowIntervalId);
-    slideshowIntervalId = setInterval(setWallpaper, CHANGE_INTERVAL_MS);
-    hideSettingsForm();
-    updateWallpaperAltText();
-  } else {
-    images = [];
-    currentPhotoAttribution = null;
-    showStatus(currentTranslations.statusNoPhotosFound, true, { persistent: true });
-    wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
-    updateUsageIndicator(true);
-  }
-}
-
-async function startDefaultSlideshowFromLocalFile() {
-  if (slideshowIntervalId) return;
-  if (defaultSlideshowIntervalId) return;
+  showStatus(t.statusLoading, false, { persistent: true });
 
   try {
-    wallpaperElement.alt = currentTranslations.wallpaperAltLocalLoading;
-    const loadedImages = await loadDefaultImageList({
-      currentTranslations,
+    let entries = getCachedPhotoUrls(collectionId);
+    let fromCache = !!entries;
+
+    if (!entries) {
+      entries = await fetchPhotosFromPexelsAPI(apiKey, collectionId, signal);
+      if (entries.length > 0) cachePhotoUrls(collectionId, entries);
+    }
+
+    if (signal.aborted) return;
+
+    const normalized = normalizeEntries(entries);
+    if (normalized.length === 0) {
+      showStatus(t.statusNoPhotosFound, true, { persistent: true });
+      return;
+    }
+
+    const msg = fromCache
+      ? `${normalized.length} ${t.wallpaperAltWallpaper} (cached). ${t.slideshowResumed}...`
+      : `${normalized.length} ${t.wallpaperAltWallpaper}. ${t.slideshowResumed}...`;
+    showStatus(msg, false, { duration: 3000 });
+    slideshow.start(normalized);
+    hideSettingsForm();
+  } catch (error) {
+    if (error.name === 'AbortError' || signal.aborted) return;
+    console.error('Error fetching Pexels photos:', error);
+    showStatus(getPexelsErrorMessage(t, error), true, { persistent: true });
+  } finally {
+    fetchController = null;
+  }
+}
+
+async function loadDefaults() {
+  if (slideshow?.running) return;
+  try {
+    const images = await loadDefaultImageList({
+      currentTranslations: t,
       showStatus,
       hideStatus,
       localImageUrlsFile: LOCAL_IMAGE_URLS_FILE,
     });
-
-    if (loadedImages.length === 0) {
-      wallpaperElement.alt = currentTranslations.wallpaperAltLocalError;
-      currentPhotoAttribution = null;
-      updateUsageIndicator(true);
-      return;
+    const normalized = normalizeEntries(images);
+    if (normalized.length > 0) {
+      slideshow.start(normalized);
+      hideStatus();
     }
-
-    defaultImages = normalizePhotoEntryList(loadedImages);
-    shuffleArray(defaultImages);
-    setDefaultWallpaper();
-    defaultSlideshowIntervalId = setInterval(setDefaultWallpaper, CHANGE_INTERVAL_MS);
-    console.log(currentTranslations.defaultSlideshowStarted);
-    hideStatus();
   } catch (error) {
-    console.error('Failed to load or process local image URLs:', error);
-    wallpaperElement.alt = currentTranslations.wallpaperAltLocalError;
-    showStatus(`${currentTranslations.statusLocalFileNotFound} (${error.message})`, true, {
-      persistent: true,
-    });
-    currentPhotoAttribution = null;
-    updateUsageIndicator(true);
+    console.error('Failed to load local images:', error);
+    showStatus(`${t.statusLocalFileNotFound} (${error.message})`, true, { persistent: true });
   }
 }
 
-function setDefaultWallpaper() {
-  if (defaultImages.length === 0) return;
-  const entry = normalizePhotoEntry(defaultImages[defaultCurrentIndex]);
-  if (!entry) return;
+// --- URL Extraction ---
 
-  wallpaperElement.src = entry.imageUrl;
-  wallpaperElement.alt = `${currentTranslations.wallpaperAltWallpaper} (Default) ${defaultCurrentIndex + 1} ${currentTranslations.wallpaperAltOf} ${defaultImages.length}`;
-  currentPhotoAttribution = entry;
-  defaultCurrentIndex = (defaultCurrentIndex + 1) % defaultImages.length;
-  if (defaultCurrentIndex === 0) {
-    shuffleArray(defaultImages);
-  }
-  updateUsageIndicator(true);
-}
-
-function stopDefaultSlideshow() {
-  if (defaultSlideshowIntervalId) {
-    clearInterval(defaultSlideshowIntervalId);
-    defaultSlideshowIntervalId = null;
-    defaultImages = [];
-    defaultCurrentIndex = 0;
-    console.log(currentTranslations.defaultSlideshowStopped);
-  }
-}
-
-function clearSettingsAndShowForm() {
-  if (slideshowIntervalId) {
-    clearInterval(slideshowIntervalId);
-    slideshowIntervalId = null;
-  }
-  clearStoredValue(STORAGE_KEYS.apiKey);
-  clearStoredValue(STORAGE_KEYS.collectionId);
-  clearStoredValue(STORAGE_KEYS.lastCollectionUrl);
-  currentPhotoAttribution = null;
-  updateUsageIndicator(true);
-  showSettingsForm();
-}
-
-function getPexelsConfigFromInputs() {
-  return {
-    apiKey: apiKeyInput.value.trim(),
-    collectionUrl: collectionUrlInput.value.trim(),
-  };
-}
-
-function handleConfiguration() {
-  const urlParams = new URLSearchParams(window.location.search);
-  let apiKey = urlParams.get('apiKey');
-  let collectionUrlParam = urlParams.get('collectionUrl');
-  let collectionIdToUse = null;
-
-  if (collectionUrlParam) {
-    collectionIdToUse = extractCollectionIdFromUrl(collectionUrlParam);
-    if (!collectionIdToUse) {
-      console.warn('Could not extract Collection ID from URL parameter:', collectionUrlParam);
-    }
-  }
-
-  if (apiKey && collectionIdToUse) {
-    console.log(
-      `Using API Key from URL and extracted Collection ID: ${collectionIdToUse} from URL: ${collectionUrlParam}`
-    );
-    setStoredValue(STORAGE_KEYS.apiKey, apiKey);
-    setStoredValue(STORAGE_KEYS.collectionId, collectionIdToUse);
-    setStoredValue(STORAGE_KEYS.lastCollectionUrl, collectionUrlParam);
-    initializeSlideshow(apiKey, collectionIdToUse);
-  } else {
-    const storedApiKey = getStoredValue(STORAGE_KEYS.apiKey);
-    const storedCollectionId = getStoredValue(STORAGE_KEYS.collectionId);
-
-    if (storedApiKey && storedCollectionId) {
-      console.log(`Using API Key and Collection ID (${storedCollectionId}) from stored settings.`);
-      initializeSlideshow(storedApiKey, storedCollectionId);
-    } else {
-      console.log('No valid API Key/Collection info found.');
-      wallpaperElement.alt = currentTranslations.wallpaperAltConfigure;
-      startDefaultSlideshowFromLocalFile();
-    }
-  }
-
-  sanitizeUrlInAddressBar();
-  updateCurrentUrlDisplay();
-}
-
-function extractCollectionIdFromUrl(url) {
+export function extractCollectionIdFromUrl(url) {
   try {
-    const parsedUrl = new URL(url);
-    if (parsedUrl.hostname !== 'www.pexels.com' && parsedUrl.hostname !== 'pexels.com') return null;
-    const pathSegments = parsedUrl.pathname.split('/').filter((segment) => segment.length > 0);
-    if (pathSegments.length < 2 || pathSegments[0] !== 'collections') return null;
-    const slugWithId = pathSegments[1];
-    const idParts = slugWithId.split('-');
-    if (idParts.length < 2) return null;
-    const potentialId = idParts.pop();
-    return /^[a-zA-Z0-9]+$/.test(potentialId) ? potentialId : null;
-  } catch (error) {
-    console.error('Invalid URL for Collection ID extraction:', error);
+    const parsed = new URL(url);
+    if (parsed.hostname !== 'www.pexels.com' && parsed.hostname !== 'pexels.com') return null;
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    if (segments.length < 2 || segments[0] !== 'collections') return null;
+    const parts = segments[1].split('-');
+    if (parts.length < 2) return null;
+    const id = parts.pop();
+    return /^[a-zA-Z0-9]+$/.test(id) ? id : null;
+  } catch {
     return null;
   }
 }
 
-function initSettingsButtonAutoHide() {
-  let inactivityMouseTimer;
+// --- Settings Button Auto-Hide ---
 
-  const showButtonAndLabel = () => {
-    if (settingsButton) {
-      settingsButton.classList.add('settings-visible');
-    }
-    if (settingsButtonLabel) {
-      settingsButtonLabel.classList.add('settings-visible');
-    }
-    settingsUIVisible = true;
-    applyUsageIndicatorVisibility();
+function initSettingsAutoHide() {
+  const btn = $('settingsButton');
+  const label = $('settingsButtonLabel');
+  const indicator = $('usage-indicator');
+  if (!btn) return;
+
+  let hideTimer;
+  let lastMove = 0;
+
+  const show = () => {
+    btn.classList.add('settings-visible');
+    label?.classList.add('settings-visible');
+    uiVisible = true;
+    indicator?.classList.remove('hidden');
   };
 
-  const hideButtonAndLabel = () => {
-    if (settingsButton && document.activeElement === settingsButton) {
-      return;
-    }
-    if (settingsButton) {
-      settingsButton.classList.remove('settings-visible');
-    }
-    if (settingsButtonLabel) {
-      settingsButtonLabel.classList.remove('settings-visible');
-    }
-    settingsUIVisible = false;
-    applyUsageIndicatorVisibility();
+  const hide = () => {
+    if (document.activeElement === btn) return;
+    btn.classList.remove('settings-visible');
+    label?.classList.remove('settings-visible');
+    uiVisible = false;
+    indicator?.classList.add('hidden');
   };
 
-  const queueHideAfterDelay = () => {
-    clearTimeout(inactivityMouseTimer);
-    inactivityMouseTimer = setTimeout(hideButtonAndLabel, 5000);
+  const scheduleHide = () => {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hide, 5000);
   };
 
-  const resetMouseInactivityTimer = () => {
-    showButtonAndLabel();
-    queueHideAfterDelay();
+  const onActivity = () => {
+    const now = Date.now();
+    if (now - lastMove < 50) return;
+    lastMove = now;
+    show();
+    scheduleHide();
   };
 
-  if (settingsButton) {
-    settingsButton.addEventListener('focus', () => {
-      showButtonAndLabel();
-      clearTimeout(inactivityMouseTimer);
-    });
-    settingsButton.addEventListener('blur', queueHideAfterDelay);
-    settingsButton.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        showButtonAndLabel();
-      }
-    });
-  }
-
-  document.addEventListener('pointermove', resetMouseInactivityTimer, { passive: true });
-  document.addEventListener('touchstart', resetMouseInactivityTimer, { passive: true });
+  btn.addEventListener('focus', () => {
+    show();
+    clearTimeout(hideTimer);
+  });
+  btn.addEventListener('blur', scheduleHide);
+  document.addEventListener('pointermove', onActivity, { passive: true });
+  document.addEventListener('touchstart', onActivity, { passive: true });
   document.addEventListener(
     'keydown',
-    (event) => {
-      if (['Tab', 'Shift', 'Enter', ' '].includes(event.key)) {
-        resetMouseInactivityTimer();
-      }
+    (e) => {
+      if (['Tab', 'Shift', 'Enter', ' '].includes(e.key)) onActivity();
     },
-    { passive: false }
+    { passive: true }
   );
 
-  resetMouseInactivityTimer();
+  onActivity();
 }
 
-function attachEventListeners() {
-  settingsButton.addEventListener('click', showSettingsForm);
-  closeFormButton.addEventListener('click', hideSettingsForm);
+// --- Translation ---
 
-  startButton.addEventListener('click', () => {
-    const { apiKey, collectionUrl } = getPexelsConfigFromInputs();
-    inputError.textContent = '';
+function translatePage() {
+  if (!t) return;
+
+  document.title = t.formTitle || 'Pexel Wallpaper';
+
+  const btn = $('settingsButton');
+  const label = $('settingsButtonLabel');
+  const closeBtn = $('closeFormButton');
+  if (btn) btn.title = t.settingsButtonTitle;
+  if (label) label.textContent = t.settingsButtonTitle;
+  if (closeBtn) closeBtn.title = t.closeFormButtonTitle;
+
+  const h2 = document.querySelector('#input-container h2');
+  if (h2) h2.textContent = t.formTitle;
+
+  const apiLabel = document.querySelector('label[for="apiKeyInput"]');
+  if (apiLabel) {
+    apiLabel.childNodes[0].nodeValue = `${t.apiKeyLabel} `;
+    const link = apiLabel.querySelector('a');
+    if (link) link.textContent = t.findApiKeyLink;
+  }
+
+  const apiInput = $('apiKeyInput');
+  if (apiInput) apiInput.placeholder = t.apiKeyPlaceholder;
+
+  const collLabel = document.querySelector('label[for="collectionUrlInput"]');
+  if (collLabel) collLabel.textContent = t.collectionUrlLabel;
+
+  const collInput = $('collectionUrlInput');
+  if (collInput) collInput.placeholder = t.collectionUrlPlaceholder;
+
+  const startBtn = $('startButton');
+  if (startBtn) startBtn.textContent = t.startButtonText;
+
+  const resetBtn = $('resetButton');
+  if (resetBtn) resetBtn.textContent = t.resetButtonText;
+
+  applyInstructions();
+  updateUsageIndicator();
+}
+
+// --- Configuration ---
+
+function handleConfiguration() {
+  const params = new URLSearchParams(window.location.search);
+  const apiKey = params.get('apiKey');
+  const collectionUrl = params.get('collectionUrl');
+  const collectionId = collectionUrl ? extractCollectionIdFromUrl(collectionUrl) : null;
+
+  if (apiKey && collectionId) {
+    setStoredValue(STORAGE_KEYS.apiKey, apiKey);
+    setStoredValue(STORAGE_KEYS.collectionId, collectionId);
+    setStoredValue(STORAGE_KEYS.lastCollectionUrl, collectionUrl);
+    loadFromAPI(apiKey, collectionId);
+  } else {
+    const storedKey = getStoredValue(STORAGE_KEYS.apiKey);
+    const storedId = getStoredValue(STORAGE_KEYS.collectionId);
+    if (storedKey && storedId) {
+      loadFromAPI(storedKey, storedId);
+    } else {
+      loadDefaults();
+    }
+  }
+
+  sanitizeUrlInAddressBar();
+}
+
+// --- Photo Change Callback ---
+
+function onPhotoChange({ entry, index, total, element }) {
+  currentAttribution = entry;
+  if (element) {
+    element.alt = `${t.wallpaperAltWallpaper} ${index + 1} ${t.wallpaperAltOf} ${total}`;
+  }
+  updateUsageIndicator();
+}
+
+// --- Event Listeners ---
+
+function attachEventListeners() {
+  $('settingsButton')?.addEventListener('click', showSettingsForm);
+  $('closeFormButton')?.addEventListener('click', hideSettingsForm);
+
+  $('startButton')?.addEventListener('click', () => {
+    const apiKey = $('apiKeyInput')?.value.trim();
+    const collectionUrl = $('collectionUrlInput')?.value.trim();
+    const inputError = $('input-error');
+    if (inputError) inputError.textContent = '';
 
     if (!apiKey || !collectionUrl) {
-      inputError.textContent = currentTranslations.errorBothRequired;
+      if (inputError) inputError.textContent = t.errorBothRequired;
       return;
     }
 
     const collectionId = extractCollectionIdFromUrl(collectionUrl);
     if (!collectionId) {
-      inputError.textContent = currentTranslations.errorInvalidPexelsUrl;
+      if (inputError) inputError.textContent = t.errorInvalidPexelsUrl;
       return;
     }
 
-    console.log(
-      `Using API Key from input and extracted Collection ID: ${collectionId} from URL: ${collectionUrl}`
-    );
     setStoredValue(STORAGE_KEYS.apiKey, apiKey);
     setStoredValue(STORAGE_KEYS.collectionId, collectionId);
     setStoredValue(STORAGE_KEYS.lastCollectionUrl, collectionUrl);
-
-    initializeSlideshow(apiKey, collectionId);
+    loadFromAPI(apiKey, collectionId);
   });
 
-  if (resetButton) {
-    resetButton.addEventListener('click', () => {
-      clearSettingsAndShowForm();
-      apiKeyInput.value = '';
-      collectionUrlInput.value = '';
-      inputError.textContent = '';
-      showStatus(currentTranslations.statusSettingsCleared, false, { duration: 4000 });
-    });
-  }
+  $('resetButton')?.addEventListener('click', () => {
+    clearSettings();
+    const apiKeyInput = $('apiKeyInput');
+    const collectionUrlInput = $('collectionUrlInput');
+    const inputError = $('input-error');
+    if (apiKeyInput) apiKeyInput.value = '';
+    if (collectionUrlInput) collectionUrlInput.value = '';
+    if (inputError) inputError.textContent = '';
+    showStatus(t.statusSettingsCleared, false, { duration: 4000 });
+  });
 }
 
-async function initializeApp() {
-  const { currentTranslations: translations } = await initializeTranslations();
-  currentTranslations = translations;
-
-  translatePage();
-  handleConfiguration();
-  updateUsageIndicator(true);
-  observePlashClass();
-  initSettingsButtonAutoHide();
-}
-
-function translatePage() {
-  if (!currentTranslations) {
-    console.error('Translations not loaded or current language not set.');
-    return;
-  }
-
-  document.title = currentTranslations.formTitle || 'Pexel Wallpaper';
-
-  if (settingsButton) settingsButton.title = currentTranslations.settingsButtonTitle;
-  if (settingsButtonLabel)
-    settingsButtonLabel.textContent = currentTranslations.settingsButtonTitle;
-  if (closeFormButton) closeFormButton.title = currentTranslations.closeFormButtonTitle;
-
-  const formTitleElement = document.querySelector('#input-container h2');
-  if (formTitleElement) formTitleElement.textContent = currentTranslations.formTitle;
-
-  const apiKeyLabelElement = document.querySelector('label[for="apiKeyInput"]');
-  if (apiKeyLabelElement) {
-    apiKeyLabelElement.childNodes[0].nodeValue = `${currentTranslations.apiKeyLabel} `;
-    const findLink = apiKeyLabelElement.querySelector('a');
-    if (findLink) findLink.textContent = currentTranslations.findApiKeyLink;
-  }
-
-  if (apiKeyInput) apiKeyInput.placeholder = currentTranslations.apiKeyPlaceholder;
-
-  const collectionUrlLabelElement = document.querySelector('label[for="collectionUrlInput"]');
-  if (collectionUrlLabelElement)
-    collectionUrlLabelElement.textContent = currentTranslations.collectionUrlLabel;
-
-  if (collectionUrlInput)
-    collectionUrlInput.placeholder = currentTranslations.collectionUrlPlaceholder;
-
-  if (startButton) startButton.textContent = currentTranslations.startButtonText;
-  if (resetButton) resetButton.textContent = currentTranslations.resetButtonText;
-
-  updateCurrentUrlDisplay();
-  applyInstructionsForUsage();
-  updateUsageIndicator(true);
-}
+// --- Init ---
 
 document.addEventListener('DOMContentLoaded', async () => {
-  attachEventListeners();
-  await initializeApp();
-});
+  initStatusOverlay($('status-overlay'));
 
-export { extractCollectionIdFromUrl };
+  const { currentTranslations } = await initializeTranslations();
+  t = currentTranslations;
+
+  const imgs = document.querySelectorAll('#wallpaper-container .wallpaper');
+  slideshow = new Slideshow(imgs[0], imgs[1], {
+    interval: CHANGE_INTERVAL_MS,
+    onPhotoChange,
+  });
+
+  attachEventListeners();
+  translatePage();
+  handleConfiguration();
+  observePlashClass();
+  initSettingsAutoHide();
+});

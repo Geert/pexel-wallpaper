@@ -13,18 +13,22 @@
     <link rel="apple-touch-icon" sizes="180x180" href="images/icon-180.png" />
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#0066ff" />
+    <link rel="preconnect" href="https://api.pexels.com" crossorigin />
+    <link rel="preconnect" href="https://images.pexels.com" />
   </head>
   <body>
-    <div id="settingsHoverTrigger"></div>
     <div id="status-overlay" class="hidden" role="status" aria-live="polite" aria-atomic="true">
       Loading...
     </div>
-    <img id="wallpaper" src="" alt="Loading wallpaper..." />
-    <button id="settingsButton" title="Change API Key or Collection">⚙️</button>
-    <span id="settingsButtonLabel">Open instellingen</span>
+    <div id="wallpaper-container">
+      <img class="wallpaper" decoding="async" alt="" />
+      <img class="wallpaper" decoding="async" alt="" />
+    </div>
+    <button id="settingsButton" title="Change API Key or Collection" aria-label="Settings">⚙️</button>
+    <span id="settingsButtonLabel">Settings</span>
 
     <div id="input-container" class="hidden">
-      <span id="closeFormButton" title="Close settings">&times;</span>
+      <button id="closeFormButton" title="Close settings" aria-label="Close settings">&times;</button>
       <h2>Pexels Wallpapers</h2>
       <ol>
         <li>

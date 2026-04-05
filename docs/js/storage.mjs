@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, SENSITIVE_QUERY_KEYS, CACHE_DURATION_MS } from './config.mjs';
+import { SENSITIVE_QUERY_KEYS, CACHE_DURATION_MS } from './config.mjs';
 
 const storageFallback = {};
 
@@ -78,7 +78,11 @@ export function cachePhotoUrls(collectionId, urls) {
     localStorage.setItem(`pexelCache_${collectionId}`, JSON.stringify(cacheEntry));
     console.log(`Cached URLs for collection ${collectionId}`);
   } catch (error) {
-    console.error('Error saving to localStorage:', error);
+    if (error.name === 'QuotaExceededError') {
+      console.warn('localStorage quota exceeded, cache not saved:', error);
+    } else {
+      console.error('Error saving to localStorage:', error);
+    }
   }
 }
 
@@ -103,5 +107,3 @@ export function getCachedPhotoUrls(collectionId) {
     return null;
   }
 }
-
-export { STORAGE_KEYS };

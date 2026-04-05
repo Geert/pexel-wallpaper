@@ -15,6 +15,7 @@ export function showStatus(message, isError = false, options = {}) {
   statusOverlay.textContent = message;
   statusOverlay.classList.remove('hidden');
   statusOverlay.classList.toggle('error', Boolean(isError));
+  statusOverlay.setAttribute('aria-live', isError ? 'assertive' : 'polite');
 
   if (statusHideTimer) {
     clearTimeout(statusHideTimer);
