@@ -121,6 +121,19 @@ export class Slideshow {
     return this._entries.length;
   }
 
+  next() {
+    if (!this._active || this._entries.length === 0) return;
+    this._clearTimer();
+    this._tick();
+  }
+
+  prev() {
+    if (!this._active || this._entries.length === 0) return;
+    this._clearTimer();
+    this._index = (this._index - 2 + this._entries.length) % this._entries.length;
+    this._tick();
+  }
+
   async _tick() {
     if (this._entries.length === 0) return;
 

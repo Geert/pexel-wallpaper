@@ -435,12 +435,34 @@ function attachEventListeners() {
   $('settingsButton')?.addEventListener('click', showSettingsForm);
   $('closeFormButton')?.addEventListener('click', hideSettingsForm);
 
-  // Show description on Play button (Samsung remote via postMessage) or 'i' key (browser)
-  window.addEventListener('message', (e) => {
-    if (e.data === 'show-description') togglePhotoDescription();
-  });
+  // Remote control & keyboard: description, next/prev, exit
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'i' || e.key === 'I') togglePhotoDescription();
+    const formOpen = !$('input-container')?.classList.contains('hidden');
+    switch (e.keyCode) {
+      case 415: // Play
+      case 10252: // Play/Pause
+      case 19: // Pause
+        togglePhotoDescription();
+        break;
+      case 39: // Right arrow
+        if (!formOpen) slideshow?.next();
+        break;
+      case 37: // Left arrow
+        if (!formOpen) slideshow?.prev();
+        break;
+      case 10009: // Samsung Back
+        try {
+          tizen.application.getCurrentApplication().exit();
+        } catch (_e) {
+          /* not on Tizen */
+        }
+        break;
+      default:
+        if (e.key === 'i' || e.key === 'I') togglePhotoDescription();
+        if (e.key === 'ArrowRight' && !formOpen) slideshow?.next();
+        if (e.key === 'ArrowLeft' && !formOpen) slideshow?.prev();
+        break;
+    }
   });
 
   $('startButton')?.addEventListener('click', () => {
@@ -478,9 +500,36 @@ function attachEventListeners() {
   });
 }
 
+// --- Tizen TV Integration ---
+
+function initTizen() {
+  try {
+    tizen.power.request('SCREEN', 'SCREEN_NORMAL');
+  } catch (_e) {
+    /* not on Tizen */
+  }
+  try {
+    webapis.appcommon.setScreenSaver(
+      webapis.appcommon.AppCommonScreenSaverState.SCREEN_SAVER_OFF,
+      function () {},
+      function () {}
+    );
+  } catch (_e) {
+    /* not on Tizen */
+  }
+  try {
+    tizen.tvinputdevice.registerKey('MediaPlay');
+    tizen.tvinputdevice.registerKey('MediaPlayPause');
+    tizen.tvinputdevice.registerKey('MediaPause');
+  } catch (_e) {
+    /* not on Tizen */
+  }
+}
+
 // --- Init ---
 
 document.addEventListener('DOMContentLoaded', async () => {
+  initTizen();
   initStatusOverlay($('status-overlay'));
 
   const { currentTranslations } = await initializeTranslations();

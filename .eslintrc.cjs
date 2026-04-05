@@ -7,6 +7,10 @@ module.exports = {
   parserOptions: {
     sourceType: 'module',
   },
+  globals: {
+    tizen: 'readonly',
+    webapis: 'readonly',
+  },
   ignorePatterns: ['__tests__/**'],
   rules: {
     'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
