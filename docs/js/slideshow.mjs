@@ -29,6 +29,7 @@ export function normalizeEntry(entry) {
       imageUrl: url,
       pageUrl: id ? `${PEXELS_PAGE_BASE_URL}${id}/` : url.includes('pexels.com') ? url : null,
       photographerUrl: null,
+      alt: null,
     };
   }
   if (typeof entry === 'object') {
@@ -39,6 +40,7 @@ export function normalizeEntry(entry) {
       imageUrl,
       pageUrl: entry.pageUrl || (id ? `${PEXELS_PAGE_BASE_URL}${id}/` : null),
       photographerUrl: entry.photographerUrl || null,
+      alt: entry.alt || null,
     };
   }
   return null;
@@ -276,6 +278,7 @@ export async function fetchPhotosFromPexelsAPI(apiKey, collectionId, signal) {
           pageUrl: buildPexelsPageUrl(photo),
           photographerUrl: photo.photographer_url || null,
           id: photo.id || null,
+          alt: photo.alt || null,
         });
       }
     }

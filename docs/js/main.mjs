@@ -384,13 +384,39 @@ function handleConfiguration() {
   sanitizeUrlInAddressBar();
 }
 
+// --- Photo Description ---
+
+let descriptionTimer = null;
+
+function showPhotoDescription(text) {
+  const el = $('photo-description');
+  if (!el || !text) {
+    hidePhotoDescription();
+    return;
+  }
+  el.textContent = text;
+  el.classList.remove('hidden');
+  requestAnimationFrame(() => el.classList.add('visible'));
+  clearTimeout(descriptionTimer);
+  descriptionTimer = setTimeout(hidePhotoDescription, 8000);
+}
+
+function hidePhotoDescription() {
+  const el = $('photo-description');
+  if (!el) return;
+  el.classList.remove('visible');
+  clearTimeout(descriptionTimer);
+}
+
 // --- Photo Change Callback ---
 
 function onPhotoChange({ entry, index, total, element }) {
   currentAttribution = entry;
   if (element) {
-    element.alt = `${t.wallpaperAltWallpaper} ${index + 1} ${t.wallpaperAltOf} ${total}`;
+    element.alt =
+      entry.alt || `${t.wallpaperAltWallpaper} ${index + 1} ${t.wallpaperAltOf} ${total}`;
   }
+  showPhotoDescription(entry.alt);
   updateUsageIndicator();
 }
 
