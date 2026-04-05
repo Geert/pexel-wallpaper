@@ -1,4 +1,4 @@
-import { LOCAL_IMAGE_URLS_FILE, CHANGE_INTERVAL_MS, STORAGE_KEYS } from './config.mjs';
+import { APP_VERSION, LOCAL_IMAGE_URLS_FILE, CHANGE_INTERVAL_MS, STORAGE_KEYS } from './config.mjs';
 import {
   setStoredValue,
   getStoredValue,
@@ -62,7 +62,7 @@ function instructionGroup() {
 function updateUsageIndicator() {
   const el = $('usage-indicator');
   if (!el) return;
-  el.textContent = 'Photos provided by Pexels';
+  el.textContent = `Photos provided by Pexels \u00b7 v${APP_VERSION}`;
   el.setAttribute(
     'href',
     currentAttribution?.pageUrl || currentAttribution?.imageUrl || 'https://www.pexels.com'
@@ -438,17 +438,21 @@ function attachEventListeners() {
   // Remote control & keyboard: description, next/prev, exit
   document.addEventListener('keydown', (e) => {
     const formOpen = !$('input-container')?.classList.contains('hidden');
+    if (formOpen) return;
+
     switch (e.keyCode) {
-      case 415: // Play
-      case 10252: // Play/Pause
-      case 19: // Pause
+      case 415: // Samsung Play
+      case 10252: // Samsung Play/Pause
+      case 19: // Samsung Pause
+      case 13: // Enter / OK
         togglePhotoDescription();
+        e.preventDefault();
         break;
       case 39: // Right arrow
-        if (!formOpen) slideshow?.next();
+        slideshow?.next();
         break;
       case 37: // Left arrow
-        if (!formOpen) slideshow?.prev();
+        slideshow?.prev();
         break;
       case 10009: // Samsung Back
         try {
@@ -459,8 +463,6 @@ function attachEventListeners() {
         break;
       default:
         if (e.key === 'i' || e.key === 'I') togglePhotoDescription();
-        if (e.key === 'ArrowRight' && !formOpen) slideshow?.next();
-        if (e.key === 'ArrowLeft' && !formOpen) slideshow?.prev();
         break;
     }
   });
@@ -546,4 +548,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   handleConfiguration();
   observePlashClass();
   initSettingsAutoHide();
+
+  // Ensure page can receive key events (important for Samsung TV after redirect)
+  document.body.tabIndex = -1;
+  document.body.focus();
 });
