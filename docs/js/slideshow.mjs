@@ -5,6 +5,7 @@ import {
   FETCH_USER_AGENT,
   PEXELS_PAGE_BASE_URL,
   LOCAL_IMAGE_URLS_FILE,
+  LOCAL_IMAGE_DATA_FILE,
 } from './config.mjs';
 
 // --- Utilities ---
@@ -306,12 +307,41 @@ export async function fetchPhotosFromPexelsAPI(apiKey, collectionId, signal) {
   return entries;
 }
 
+async function loadDefaultImageListFromJson(localImageDataFile) {
+  try {
+    const response = await fetch(localImageDataFile);
+    if (!response.ok) return null;
+    const data = await response.json();
+    const photos = data?.photos;
+    if (!Array.isArray(photos) || photos.length === 0) return null;
+    return photos.map((photo) => ({
+      imageUrl: photo.imageUrl,
+      pageUrl: photo.pageUrl || null,
+      photographer: photo.photographer || null,
+      photographerUrl: photo.photographerUrl || null,
+      alt: photo.alt || null,
+      id: photo.id ? String(photo.id) : null,
+    }));
+  } catch (_e) {
+    return null;
+  }
+}
+
 export async function loadDefaultImageList({
   currentTranslations,
   showStatus,
   hideStatus,
+  localImageDataFile = LOCAL_IMAGE_DATA_FILE,
   localImageUrlsFile = LOCAL_IMAGE_URLS_FILE,
 }) {
+  // Try JSON with full metadata first
+  const jsonImages = await loadDefaultImageListFromJson(localImageDataFile);
+  if (jsonImages) {
+    hideStatus?.();
+    return jsonImages;
+  }
+
+  // Fallback to plain text URL list
   const response = await fetch(localImageUrlsFile);
   if (!response.ok) {
     showStatus(`${currentTranslations.statusLocalFileNotFound} (HTTP ${response.status})`, true, {

@@ -222,7 +222,59 @@ describe('loadDefaultImageList', () => {
     global.fetch.mockReset();
   });
 
-  test('parses text file into photo entries', async () => {
+  const jsonNotFound = { ok: false, status: 404 };
+
+  test('loads from JSON data file when available', async () => {
+    const mockJson = {
+      updatedAt: '2026-04-08T00:00:00Z',
+      collectionId: 'test',
+      totalPhotos: 2,
+      photos: [
+        {
+          id: 111,
+          imageUrl: 'https://images.pexels.com/photos/111/a.jpg',
+          alt: 'A photo',
+          photographer: 'Alice',
+          photographerUrl: 'https://www.pexels.com/@alice',
+          pageUrl: 'https://www.pexels.com/photo/111/',
+        },
+        {
+          id: 222,
+          imageUrl: 'https://images.pexels.com/photos/222/b.jpg',
+          alt: null,
+          photographer: 'Bob',
+          photographerUrl: null,
+          pageUrl: 'https://www.pexels.com/photo/222/',
+        },
+      ],
+    };
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockJson),
+    });
+
+    const hideStatus = jest.fn();
+    const result = await loadDefaultImageList({
+      currentTranslations: { statusLocalFileNotFound: 'Not found' },
+      showStatus: jest.fn(),
+      hideStatus,
+      localImageDataFile: 'test.json',
+      localImageUrlsFile: 'test.txt',
+    });
+
+    expect(result).toHaveLength(2);
+    expect(result[0].imageUrl).toBe('https://images.pexels.com/photos/111/a.jpg');
+    expect(result[0].photographer).toBe('Alice');
+    expect(result[0].alt).toBe('A photo');
+    expect(result[0].id).toBe('111');
+    expect(result[1].photographer).toBe('Bob');
+    expect(result[1].alt).toBeNull();
+    expect(hideStatus).toHaveBeenCalled();
+  });
+
+  test('falls back to text file when JSON not available', async () => {
+    global.fetch.mockResolvedValueOnce(jsonNotFound);
+
     const mockText =
       'https://images.pexels.com/photos/111/a.jpg\nhttps://images.pexels.com/photos/222/b.jpg\n';
     global.fetch.mockResolvedValueOnce({
@@ -238,6 +290,7 @@ describe('loadDefaultImageList', () => {
       currentTranslations: translations,
       showStatus,
       hideStatus,
+      localImageDataFile: 'test.json',
       localImageUrlsFile: 'test.txt',
     });
 
@@ -248,7 +301,8 @@ describe('loadDefaultImageList', () => {
     expect(hideStatus).toHaveBeenCalled();
   });
 
-  test('returns empty array on HTTP error', async () => {
+  test('returns empty array on HTTP error for both files', async () => {
+    global.fetch.mockResolvedValueOnce(jsonNotFound);
     global.fetch.mockResolvedValueOnce({
       ok: false,
       status: 404,
@@ -261,6 +315,7 @@ describe('loadDefaultImageList', () => {
       currentTranslations: translations,
       showStatus,
       hideStatus: jest.fn(),
+      localImageDataFile: 'test.json',
       localImageUrlsFile: 'test.txt',
     });
 
@@ -270,7 +325,8 @@ describe('loadDefaultImageList', () => {
     });
   });
 
-  test('returns empty array for empty file', async () => {
+  test('returns empty array for empty text file', async () => {
+    global.fetch.mockResolvedValueOnce(jsonNotFound);
     global.fetch.mockResolvedValueOnce({
       ok: true,
       text: () => Promise.resolve(''),
@@ -283,6 +339,7 @@ describe('loadDefaultImageList', () => {
       currentTranslations: translations,
       showStatus,
       hideStatus: jest.fn(),
+      localImageDataFile: 'test.json',
       localImageUrlsFile: 'test.txt',
     });
 
@@ -290,7 +347,9 @@ describe('loadDefaultImageList', () => {
     expect(showStatus).toHaveBeenCalled();
   });
 
-  test('filters blank lines', async () => {
+  test('filters blank lines from text fallback', async () => {
+    global.fetch.mockResolvedValueOnce(jsonNotFound);
+
     const mockText = 'https://images.pexels.com/photos/111/a.jpg\n\n\n  \n';
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -301,6 +360,7 @@ describe('loadDefaultImageList', () => {
       currentTranslations: { statusLocalFileNotFound: 'Not found' },
       showStatus: jest.fn(),
       hideStatus: jest.fn(),
+      localImageDataFile: 'test.json',
       localImageUrlsFile: 'test.txt',
     });
 

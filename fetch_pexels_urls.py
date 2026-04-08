@@ -1,6 +1,8 @@
 # Python script to fetch photo URLs from a Pexels collection
+import json
 import os
 import time
+from datetime import datetime, timezone
 
 import requests
 from dotenv import load_dotenv
@@ -15,6 +17,7 @@ if not API_KEY:
     raise ValueError("Pexels API key not found. Set the PEXELS_API_KEY environment variable.")
 
 OUTPUT_FILE = "docs/pexels_photo_urls.txt"
+OUTPUT_JSON_FILE = "docs/pexels_photo_data.json"
 # Choose photo size: original, large2x, large, medium, small, portrait, landscape, tiny
 PHOTO_SIZE = "original" 
 PHOTOS_PER_PAGE = 80
@@ -30,44 +33,49 @@ HEADERS = {
 
 BASE_URL = "https://api.pexels.com/v1/"
 
+def fetch_collection_page(api_url):
+    """Fetch a single page from the Pexels API with retry logic."""
+    response = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = requests.get(api_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+            if response.status_code == 429:
+                default_wait = RETRY_DELAY_SECONDS * attempt * 2
+                wait_time = int(
+                    response.headers.get("Retry-After", default_wait)
+                )
+                print(
+                    f"Rate limited (429). Waiting {wait_time}s "
+                    f"before retry ({attempt}/{MAX_RETRIES})..."
+                )
+                time.sleep(wait_time)
+                if attempt == MAX_RETRIES:
+                    response.raise_for_status()
+                continue
+            response.raise_for_status()
+            return response
+        except requests.exceptions.RequestException as exc:
+            if attempt == MAX_RETRIES:
+                print(f"Request failed after {MAX_RETRIES} attempts: {exc}")
+                raise
+            wait_time = RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
+            print(
+                "Request error: "
+                f"{exc}. Retrying in {wait_time}s ({attempt}/{MAX_RETRIES})..."
+            )
+            time.sleep(wait_time)
+    return response
+
+
 def fetch_photos_from_collection(collection_id):
     print(f"\nFetching photos from collection ID: {collection_id}")
     photo_urls = []
+    photo_data = []
     api_url_to_fetch = f"{BASE_URL}collections/{collection_id}?per_page={PHOTOS_PER_PAGE}"
 
     while api_url_to_fetch:
         print(f"\nFetching data from URL: {api_url_to_fetch}")
-        
-        response = None
-        for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                response = requests.get(api_url_to_fetch, headers=HEADERS, timeout=REQUEST_TIMEOUT)
-                if response.status_code == 429:
-                    default_wait = RETRY_DELAY_SECONDS * attempt * 2
-                    wait_time = int(
-                        response.headers.get("Retry-After", default_wait)
-                    )
-                    print(
-                        f"Rate limited (429). Waiting {wait_time}s "
-                        f"before retry ({attempt}/{MAX_RETRIES})..."
-                    )
-                    time.sleep(wait_time)
-                    if attempt == MAX_RETRIES:
-                        response.raise_for_status()
-                    continue
-                response.raise_for_status()
-                break
-            except requests.exceptions.RequestException as exc:
-                if attempt == MAX_RETRIES:
-                    print(f"Request failed after {MAX_RETRIES} attempts: {exc}")
-                    raise
-                wait_time = RETRY_DELAY_SECONDS * (2 ** (attempt - 1))
-                print(
-                    "Request error: "
-                    f"{exc}. Retrying in {wait_time}s ({attempt}/{MAX_RETRIES})..."
-                )
-                time.sleep(wait_time)
-
+        response = fetch_collection_page(api_url_to_fetch)
         data = response.json()
 
         print(
@@ -86,28 +94,39 @@ def fetch_photos_from_collection(collection_id):
                 photo_src = item.get("src", {}).get(PHOTO_SIZE)
                 if photo_src:
                     photo_urls.append(photo_src)
+                    photo_data.append({
+                        "id": item.get("id"),
+                        "imageUrl": photo_src,
+                        "alt": item.get("alt") or None,
+                        "photographer": item.get("photographer") or None,
+                        "photographerUrl": item.get("photographer_url") or None,
+                        "pageUrl": item.get("url") or f"https://www.pexels.com/photo/{item.get('id')}/",
+                        "width": item.get("width"),
+                        "height": item.get("height"),
+                        "avgColor": item.get("avg_color") or None,
+                    })
                 else:
                     print(
                         "Warning: Photo with ID "
                         f"{item.get('id')} does not have size '{PHOTO_SIZE}'. Available "
                         f"sizes: {list(item.get('src', {}).keys())}"
                     )
-        
+
         next_page = data.get('next_page')
         if next_page:
             next_page = next_page.replace("/v1/v1/", "/v1/")
         api_url_to_fetch = next_page
 
-    print(f"Finished fetching. Total photo URLs collected: {len(photo_urls)}") 
-    return photo_urls
+    print(f"Finished fetching. Total photos collected: {len(photo_urls)}")
+    return photo_urls, photo_data
 
 if __name__ == "__main__":
     print("Starting Pexels photo fetcher...")
 
-    print(f"Using API Key ending with: ...{API_KEY[-4:]}") # Avoid printing the full key
+    print(f"Using API Key ending with: ...{API_KEY[-4:]}")  # Avoid printing the full key
 
     print(f"Automated run: Using predefined COLLECTION_ID: {COLLECTION_ID}")
-    photo_urls = fetch_photos_from_collection(COLLECTION_ID)
+    photo_urls, photo_data = fetch_photos_from_collection(COLLECTION_ID)
 
     if photo_urls:
         with open(OUTPUT_FILE, "w") as f:
@@ -115,5 +134,15 @@ if __name__ == "__main__":
                 f.write(f"{url}\n")
         print(f"\nSuccessfully fetched {len(photo_urls)} photo URLs.")
         print(f"Saved to: {OUTPUT_FILE}")
+
+        json_output = {
+            "updatedAt": datetime.now(timezone.utc).isoformat(),
+            "collectionId": COLLECTION_ID,
+            "totalPhotos": len(photo_data),
+            "photos": photo_data,
+        }
+        with open(OUTPUT_JSON_FILE, "w") as f:
+            json.dump(json_output, f, indent=2, ensure_ascii=False)
+        print(f"Saved metadata to: {OUTPUT_JSON_FILE}")
     else:
         print("No photo URLs were fetched.")

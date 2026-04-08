@@ -1,4 +1,10 @@
-import { APP_VERSION, LOCAL_IMAGE_URLS_FILE, CHANGE_INTERVAL_MS, STORAGE_KEYS } from './config.mjs';
+import {
+  APP_VERSION,
+  LOCAL_IMAGE_URLS_FILE,
+  LOCAL_IMAGE_DATA_FILE,
+  CHANGE_INTERVAL_MS,
+  STORAGE_KEYS,
+} from './config.mjs';
 import {
   setStoredValue,
   getStoredValue,
@@ -233,6 +239,7 @@ async function loadDefaults() {
       currentTranslations: t,
       showStatus,
       hideStatus,
+      localImageDataFile: LOCAL_IMAGE_DATA_FILE,
       localImageUrlsFile: LOCAL_IMAGE_URLS_FILE,
     });
     const normalized = normalizeEntries(images);
