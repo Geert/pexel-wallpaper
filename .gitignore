@@ -26,3 +26,9 @@ __pycache__/
 *$py.class
 node*
 .DS_Store
+
+# Tizen build artifacts
+docs/*.wgt
+docs/.manifest.tmp
+docs/author-signature.xml
+docs/signature*.xml

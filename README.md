@@ -30,9 +30,11 @@ To get started, follow these steps which are also displayed in the settings form
 
 The TV build runs entirely from the bundled `.wgt`; it does not contact the Pexels API and shows no settings UI. Only the photo metadata JSON and the photo images themselves are fetched at runtime (allowed by the Samsung Store CSP).
 
-1. **Open the project in Tizen Studio:** open `docs/` as a Tizen TV project (`config.xml` lives there).
-2. **Build the `.wgt`** via Tizen Studio's Build Package action.
-3. **Install on a Samsung TV** via Smart Development Bridge (sdb) or sideload via developer mode.
+1. **Enable Developer Mode** on the TV (Apps screen → `12345` on the remote, set the Host PC IP, reboot the TV).
+2. **Package** `docs/` with Tizen Studio's CLI: `cd docs && tizen package -t wgt -s <profile> -- .` (or build via the Tizen Studio GUI).
+3. **Install** via `sdb connect <tv-ip>` → `tizen install -n "Pexel Wallpaper.wgt" -t <device>`.
+
+Full instructions, the Jellyfin2Samsung sideload variant, and common troubleshooting live in [`docs/DEPLOY-TIZEN.md`](docs/DEPLOY-TIZEN.md).
 
 Remote control:
 

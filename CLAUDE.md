@@ -50,9 +50,13 @@ Standalone Node ESM script (zero deps) that fetches all photos from a hardcoded 
 
 ### Tizen / Samsung TV frontend
 - `docs/config.xml` is the Tizen widget manifest. CSP allows `connect-src 'self' https://geert.github.io` for the JSON fetch and `img-src https://images.pexels.com` for photos. No `script-src` other than `'self'` — Samsung Store rejects remote JS.
-- `docs/.tzpkgignore` lists files that don't need to be in the `.wgt`. If your Tizen Studio version ignores it, configure exclusions under Project Properties > Tizen Studio > Package.
+- `docs/.tzpkgignore` lists files that don't need to be in the `.wgt`. The Tizen CLI does not currently honor it; the GUI does (Project Properties → Tizen Studio → Package).
 - Tizen detection: `isTizenTV()` checks `typeof tizen !== 'undefined' && typeof tizen.power !== 'undefined'`. When true: settings UI is hidden, URL params are ignored, `loadDefaults()` is called with `REMOTE_PHOTO_DATA_URL` instead of the relative path.
 - D-pad remote keys (arrow keys / OK / Play / Back) are wired unconditionally in `attachEventListeners` — they're no-ops outside Tizen unless the host (Plash interactive, browser) forwards keyboard events.
+- Package id (fixed in `config.xml`): `PxlWallppr.TizenWallpaper`.
+
+#### Deploying to a TV
+End-to-end build + install instructions, including the Jellyfin2Samsung sideload variant and troubleshooting, live in [`docs/DEPLOY-TIZEN.md`](docs/DEPLOY-TIZEN.md). The short version: `cd docs && tizen package -t wgt -s <profile> -- .` then `sdb connect <tv-ip>` and `tizen install -n "Pexel Wallpaper.wgt" -t <device>`. The TV must have Developer Mode on with its Host PC IP pointing at the deploying machine — a mismatch presents as `sdb connect` failing even though TCP port 26101 is open.
 
 ### Tests (`__tests__/script.test.js`)
 Jest with jsdom. Tests import directly from the ESM modules. `jest.setup.js` provides `fetch`, `TextEncoder`, and `matchMedia` mocks.
