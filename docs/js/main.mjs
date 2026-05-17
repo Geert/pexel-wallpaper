@@ -3,6 +3,7 @@ import {
   LOCAL_IMAGE_URLS_FILE,
   LOCAL_IMAGE_DATA_FILE,
   REMOTE_PHOTO_DATA_URL,
+  REMOTE_PHOTO_URLS_URL,
   CHANGE_INTERVAL_MS,
   STORAGE_KEYS,
 } from './config.mjs';
@@ -237,17 +238,35 @@ async function loadFromAPI(apiKey, collectionId) {
 async function loadDefaults() {
   if (slideshow?.running) return;
   try {
+    let photoMeta = null;
     const images = await loadDefaultImageList({
       currentTranslations: t,
       showStatus,
       hideStatus,
       localImageDataFile: isTizenTV() ? REMOTE_PHOTO_DATA_URL : LOCAL_IMAGE_DATA_FILE,
-      localImageUrlsFile: LOCAL_IMAGE_URLS_FILE,
+      localImageUrlsFile: isTizenTV() ? REMOTE_PHOTO_URLS_URL : LOCAL_IMAGE_URLS_FILE,
+      onMeta: (meta) => {
+        photoMeta = meta;
+      },
     });
     const normalized = normalizeEntries(images);
     if (normalized.length > 0) {
       slideshow.start(normalized);
       hideStatus();
+      if (photoMeta) {
+        const sourceLabel = photoMeta.source === 'cache' ? 'cache' : 'server';
+        const dateLabel = photoMeta.updatedAt
+          ? new Date(photoMeta.updatedAt).toLocaleString(undefined, {
+              dateStyle: 'short',
+              timeStyle: 'short',
+            })
+          : '—';
+        showStatus(
+          `${normalized.length} foto's geladen (${sourceLabel}, bijgewerkt ${dateLabel})`,
+          false,
+          { duration: 5000 }
+        );
+      }
     }
   } catch (error) {
     console.error('Failed to load local images:', error);
@@ -276,7 +295,8 @@ export function extractCollectionIdFromUrl(url) {
 
 export function isTizenTV() {
   try {
-    return typeof tizen !== 'undefined' && typeof tizen.power !== 'undefined';
+    if (typeof tizen !== 'undefined') return true;
+    return /Tizen/i.test(navigator.userAgent || '');
   } catch (_e) {
     return false;
   }

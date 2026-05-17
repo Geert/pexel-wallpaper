@@ -3,6 +3,8 @@ export const LOCAL_IMAGE_URLS_FILE = 'pexels_photo_urls.txt';
 export const LOCAL_IMAGE_DATA_FILE = 'pexels_photo_data.json';
 export const REMOTE_PHOTO_DATA_URL =
   'https://geert.github.io/pexel-wallpaper/pexels_photo_data.json';
+export const REMOTE_PHOTO_URLS_URL =
+  'https://geert.github.io/pexel-wallpaper/pexels_photo_urls.txt';
 export const CHANGE_INTERVAL_MS = 300000; // 5 minutes
 export const PHOTO_SIZE_TO_DISPLAY = 'original';
 export const PEXELS_BASE_URL = 'https://api.pexels.com/v1/';

@@ -86,6 +86,33 @@ export function cachePhotoUrls(collectionId, urls) {
   }
 }
 
+const PHOTO_DATA_CACHE_KEY = 'pexelWallpaper.photoDataCache';
+
+export function cachePhotoData(url, data) {
+  try {
+    localStorage.setItem(
+      PHOTO_DATA_CACHE_KEY,
+      JSON.stringify({ timestamp: Date.now(), url, data })
+    );
+  } catch (error) {
+    if (error.name !== 'QuotaExceededError') {
+      console.warn('Error caching photo data:', error);
+    }
+  }
+}
+
+export function getCachedPhotoData(url) {
+  try {
+    const raw = localStorage.getItem(PHOTO_DATA_CACHE_KEY);
+    if (!raw) return null;
+    const entry = JSON.parse(raw);
+    if (entry.url !== url) return null;
+    return entry.data;
+  } catch (_e) {
+    return null;
+  }
+}
+
 export function getCachedPhotoUrls(collectionId) {
   try {
     const cachedItem = localStorage.getItem(`pexelCache_${collectionId}`);

@@ -7,6 +7,7 @@ import {
   LOCAL_IMAGE_URLS_FILE,
   LOCAL_IMAGE_DATA_FILE,
 } from './config.mjs';
+import { cachePhotoData, getCachedPhotoData } from './storage.mjs';
 
 // --- Utilities ---
 
@@ -307,21 +308,51 @@ export async function fetchPhotosFromPexelsAPI(apiKey, collectionId, signal) {
   return entries;
 }
 
-async function loadDefaultImageListFromJson(localImageDataFile) {
+function mapPhotoEntries(photos) {
+  if (!Array.isArray(photos) || photos.length === 0) return null;
+  return photos.map((photo) => ({
+    imageUrl: photo.imageUrl,
+    pageUrl: photo.pageUrl || null,
+    photographer: photo.photographer || null,
+    photographerUrl: photo.photographerUrl || null,
+    alt: photo.alt || null,
+    id: photo.id ? String(photo.id) : null,
+  }));
+}
+
+function refreshPhotoDataCache(url) {
+  fetch(url)
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => {
+      if (data && Array.isArray(data.photos) && data.photos.length > 0) {
+        cachePhotoData(url, data);
+      }
+    })
+    .catch(() => {});
+}
+
+async function loadDefaultImageListFromJson(localImageDataFile, onMeta) {
+  const cached = getCachedPhotoData(localImageDataFile);
+  if (cached) {
+    const entries = mapPhotoEntries(cached.photos);
+    if (entries) {
+      onMeta?.({ source: 'cache', updatedAt: cached.updatedAt });
+      refreshPhotoDataCache(localImageDataFile);
+      return entries;
+    }
+  }
+
   try {
     const response = await fetch(localImageDataFile);
     if (!response.ok) return null;
     const data = await response.json();
-    const photos = data?.photos;
-    if (!Array.isArray(photos) || photos.length === 0) return null;
-    return photos.map((photo) => ({
-      imageUrl: photo.imageUrl,
-      pageUrl: photo.pageUrl || null,
-      photographer: photo.photographer || null,
-      photographerUrl: photo.photographerUrl || null,
-      alt: photo.alt || null,
-      id: photo.id ? String(photo.id) : null,
-    }));
+    const entries = mapPhotoEntries(data?.photos);
+    if (entries) {
+      cachePhotoData(localImageDataFile, data);
+      onMeta?.({ source: 'fresh', updatedAt: data?.updatedAt });
+      return entries;
+    }
+    return null;
   } catch (_e) {
     return null;
   }
@@ -333,9 +364,10 @@ export async function loadDefaultImageList({
   hideStatus,
   localImageDataFile = LOCAL_IMAGE_DATA_FILE,
   localImageUrlsFile = LOCAL_IMAGE_URLS_FILE,
+  onMeta,
 }) {
   // Try JSON with full metadata first
-  const jsonImages = await loadDefaultImageListFromJson(localImageDataFile);
+  const jsonImages = await loadDefaultImageListFromJson(localImageDataFile, onMeta);
   if (jsonImages) {
     hideStatus?.();
     return jsonImages;
