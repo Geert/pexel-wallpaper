@@ -94,6 +94,59 @@ describe('utility functions', () => {
   });
 });
 
+describe('environment detection', () => {
+  let detectEnvironment, isTizenTV;
+
+  beforeAll(async () => {
+    ({ detectEnvironment, isTizenTV } = await import('../docs/js/main.mjs'));
+  });
+
+  beforeEach(() => {
+    const dom = new JSDOM('<!doctype html><html><body></body></html>', {
+      url: 'https://example.com/',
+      pretendToBeVisual: true,
+    });
+    global.window = dom.window;
+    global.document = dom.window.document;
+    global.navigator = dom.window.navigator;
+    delete global.tizen;
+  });
+
+  afterEach(() => {
+    delete global.window;
+    delete global.document;
+    delete global.navigator;
+    delete global.tizen;
+  });
+
+  test('isTizenTV returns false when tizen global is absent', () => {
+    expect(isTizenTV()).toBe(false);
+  });
+
+  test('isTizenTV returns true when tizen.power is present', () => {
+    global.tizen = { power: {} };
+    expect(isTizenTV()).toBe(true);
+  });
+
+  test('isTizenTV returns false when tizen exists but lacks power namespace', () => {
+    global.tizen = {};
+    expect(isTizenTV()).toBe(false);
+  });
+
+  test('detectEnvironment returns usageTizenTV on a Tizen TV', () => {
+    global.tizen = { power: {} };
+    expect(detectEnvironment()).toBe('usageTizenTV');
+  });
+
+  test('detectEnvironment returns a non-Tizen env when tizen is absent', () => {
+    Object.defineProperty(global.navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      configurable: true,
+    });
+    expect(detectEnvironment()).not.toBe('usageTizenTV');
+  });
+});
+
 describe('extractPexelsId', () => {
   let extractPexelsId;
 

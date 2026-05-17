@@ -24,6 +24,7 @@ const FALLBACK_TRANSLATIONS = {
     usageBrowserMac: 'Browser on macOS',
     usageBrowserWindows: 'Browser on Windows',
     usageBrowserOther: 'Browser',
+    usageTizenTV: 'Samsung TV',
     instructions: {
       mac: {
         step1Prefix: 'Install Plash:',

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets"
+        xmlns:tizen="http://tizen.org/ns/widgets"
+        id="http://github.com/Geert/pexel-wallpaper"
+        version="1.11.0"
+        viewmodes="maximized">
+
+    <tizen:application id="PxlWallppr.TizenWallpaper"
+                       package="PxlWallppr"
+                       required_version="2.3"/>
+
+    <content src="index.html"/>
+
+    <icon src="images/icon-128.png"/>
+    <name>Pexel Wallpaper</name>
+    <description>Fullscreen wallpaper slideshow from Pexels collections</description>
+
+    <tizen:profile name="tv-samsung"/>
+    <tizen:setting screen-orientation="landscape"
+                   context-menu="disable"
+                   hwkey-event="enable"
+                   background-support="disable"/>
+
+    <!-- External origins the app may contact -->
+    <access origin="https://images.pexels.com" subdomains="true"/>
+    <access origin="https://geert.github.io" subdomains="true"/>
+
+    <!-- Privileges -->
+    <tizen:privilege name="http://tizen.org/privilege/power"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+
+    <!-- Content Security Policy -->
+    <tizen:content-security-policy>
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' https://images.pexels.com https://*.pexels.com data:;
+        connect-src 'self' https://geert.github.io;
+    </tizen:content-security-policy>
+</widget>

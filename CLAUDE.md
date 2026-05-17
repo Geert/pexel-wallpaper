@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pexels Dynamic Wallpaper — a static web app (hosted on GitHub Pages at `docs/`) that displays a rotating slideshow of Pexels collection photos. Designed to be used as a desktop wallpaper source via Plash (macOS) or Lively (Windows). A Node script fetches photo URLs from the Pexels API and writes them to a local text file used as the fallback image source.
+Pexels Dynamic Wallpaper — a static web app (hosted on GitHub Pages at `docs/`) that displays a rotating slideshow of Pexels collection photos. Powers three frontends from a single codebase: Plash (macOS), Lively (Windows), and a Samsung Smart TV app built with Tizen Studio (`docs/config.xml`). A Node script fetches photo URLs from the Pexels API and writes them to a local text/JSON file used as the fallback source.
 
 ## Commands
 
@@ -47,6 +47,12 @@ Static site served by GitHub Pages. All JS uses native ES modules (`.mjs`).
 
 ### Backend (`fetch_pexels_urls.mjs`)
 Standalone Node ESM script (zero deps) that fetches all photos from a hardcoded Pexels collection (`COLLECTION_ID = "vmnecek"`) with retry logic and rate limit (429) handling, writes URLs to `docs/pexels_photo_urls.txt` and metadata to `docs/pexels_photo_data.json`. Runs daily via GitHub Actions (`.github/workflows/update_photos.yml`).
+
+### Tizen / Samsung TV frontend
+- `docs/config.xml` is the Tizen widget manifest. CSP allows `connect-src 'self' https://geert.github.io` for the JSON fetch and `img-src https://images.pexels.com` for photos. No `script-src` other than `'self'` — Samsung Store rejects remote JS.
+- `docs/.tzpkgignore` lists files that don't need to be in the `.wgt`. If your Tizen Studio version ignores it, configure exclusions under Project Properties > Tizen Studio > Package.
+- Tizen detection: `isTizenTV()` checks `typeof tizen !== 'undefined' && typeof tizen.power !== 'undefined'`. When true: settings UI is hidden, URL params are ignored, `loadDefaults()` is called with `REMOTE_PHOTO_DATA_URL` instead of the relative path.
+- D-pad remote keys (arrow keys / OK / Play / Back) are wired unconditionally in `attachEventListeners` — they're no-ops outside Tizen unless the host (Plash interactive, browser) forwards keyboard events.
 
 ### Tests (`__tests__/script.test.js`)
 Jest with jsdom. Tests import directly from the ESM modules. `jest.setup.js` provides `fetch`, `TextEncoder`, and `matchMedia` mocks.

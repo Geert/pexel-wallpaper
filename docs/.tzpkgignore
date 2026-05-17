@@ -1,0 +1,11 @@
+# Files excluded from the Tizen .wgt package.
+# These are needed by the web frontend (GitHub Pages) but redundant in the
+# Tizen build: the TV always fetches pexels_photo_data.json from
+# https://geert.github.io/pexel-wallpaper/ at runtime (see config.xml CSP).
+#
+# If your Tizen Studio version does not honor .tzpkgignore, configure these
+# exclusions manually under Project Properties > Tizen Studio > Package.
+pexels_photo_data.json
+pexels_photo_urls.txt
+manifest.json
+superpowers/

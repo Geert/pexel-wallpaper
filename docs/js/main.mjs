@@ -2,6 +2,7 @@ import {
   APP_VERSION,
   LOCAL_IMAGE_URLS_FILE,
   LOCAL_IMAGE_DATA_FILE,
+  REMOTE_PHOTO_DATA_URL,
   CHANGE_INTERVAL_MS,
   STORAGE_KEYS,
 } from './config.mjs';
@@ -39,7 +40,8 @@ const $ = (id) => document.getElementById(id);
 
 // --- Environment Detection ---
 
-function detectEnvironment() {
+export function detectEnvironment() {
+  if (isTizenTV()) return 'usageTizenTV';
   const ua = (navigator.userAgent || '').toLowerCase();
   const platform = (navigator.platform || '').toLowerCase();
   if (typeof window.livelyPropertyListener === 'function' || window.chrome?.webview) {
@@ -239,7 +241,7 @@ async function loadDefaults() {
       currentTranslations: t,
       showStatus,
       hideStatus,
-      localImageDataFile: LOCAL_IMAGE_DATA_FILE,
+      localImageDataFile: isTizenTV() ? REMOTE_PHOTO_DATA_URL : LOCAL_IMAGE_DATA_FILE,
       localImageUrlsFile: LOCAL_IMAGE_URLS_FILE,
     });
     const normalized = normalizeEntries(images);
@@ -272,7 +274,7 @@ export function extractCollectionIdFromUrl(url) {
 
 // --- Settings Button Auto-Hide ---
 
-function isTizenTV() {
+export function isTizenTV() {
   try {
     return typeof tizen !== 'undefined' && typeof tizen.power !== 'undefined';
   } catch (_e) {
@@ -388,6 +390,12 @@ function translatePage() {
 // --- Configuration ---
 
 function handleConfiguration() {
+  // Tizen TV: no settings UI, no URL params — always fetch the remote default JSON.
+  if (isTizenTV()) {
+    loadDefaults();
+    return;
+  }
+
   const params = new URLSearchParams(window.location.search);
   const apiKey = params.get('apiKey');
   const collectionUrl = params.get('collectionUrl');

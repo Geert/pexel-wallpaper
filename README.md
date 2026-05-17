@@ -1,8 +1,10 @@
 # Pexels Dynamic Wallpaper
 
-Set your desktop to a dynamic slideshow of beautiful images from your favorite Pexels collections using the [Plash app (Mac OS)](https://apps.apple.com/us/app/plash/id1494023538) or [Lively App (Windows)](https://apps.microsoft.com/detail/9NTM2QC6QWS7)
+Set your desktop or TV to a dynamic slideshow of beautiful images from your favorite Pexels collections. The same web app powers three frontends:
 
-This web application provides the Pexels integration for Plash or Lively, allowing you to easily configure and display high-quality wallpapers.
+- **macOS** via [Plash](https://apps.apple.com/us/app/plash/id1494023538) — hosts the live URL as a desktop background
+- **Windows** via [Lively](https://apps.microsoft.com/detail/9NTM2QC6QWS7) — same idea on Windows
+- **Samsung Smart TV** via a Tizen `.wgt` built from this repo — bundles the app locally, fetches photo metadata from GitHub Pages at runtime
 
 [Live Demo](https://geert.github.io/pexel-wallpaper/)
 
@@ -23,6 +25,23 @@ To get started, follow these steps which are also displayed in the settings form
    *  Download and install from the [Microsoft Store](https://apps.microsoft.com/detail/9NTM2QC6QWS7)
 2. **Add Web App to Lively:**
    *  In Lively, choose the + button, add this URL: `https://geert.github.io/pexel-wallpaper/`
+
+### Samsung Smart TV (Tizen)
+
+The TV build runs entirely from the bundled `.wgt`; it does not contact the Pexels API and shows no settings UI. Only the photo metadata JSON and the photo images themselves are fetched at runtime (allowed by the Samsung Store CSP).
+
+1. **Open the project in Tizen Studio:** open `docs/` as a Tizen TV project (`config.xml` lives there).
+2. **Build the `.wgt`** via Tizen Studio's Build Package action.
+3. **Install on a Samsung TV** via Smart Development Bridge (sdb) or sideload via developer mode.
+
+Remote control:
+
+| Button | Action |
+|---|---|
+| OK / Enter / Play | Toggle photo info overlay (bottom-right) |
+| Right arrow | Next photo |
+| Left arrow | Previous photo |
+| Back | Exit app |
 
 ### Configure Pexels Wallpaper
 1.  **Enter Pexels API Key:**
@@ -48,10 +67,12 @@ Your Desktop will now cycle through images from your selected Pexels collection!
 
 ## Features
 
-*   Direct integration with Pexels collections via their API.
-*   User-friendly setup through an interactive form.
+*   Direct integration with Pexels collections via their API (Plash/Lively/browser).
+*   User-friendly setup through an interactive form (Plash/Lively/browser).
 *   Multi-language support (EN, NL, DE, FR).
 *   Fallback to local image URLs if no API key is provided (requires `pexels_photo_urls.txt` in the `docs/` folder with image URLs, one per line).
+*   Samsung TV build (Tizen `.wgt`) that fetches photo metadata at runtime from GitHub Pages; no API key needed.
+*   Keyboard / remote navigation (arrow keys + OK) works in any interactive frontend.
 
 ## License
 
