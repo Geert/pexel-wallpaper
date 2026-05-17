@@ -4,10 +4,10 @@
   "description": "Tests voor Pexel Wallpaper",
   "scripts": {
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "fetch": "node fetch_pexels_urls.mjs",
     "lint:js": "eslint \"docs/js/**/*.{js,mjs}\"",
     "format:js": "prettier --check \"docs/js/**/*.{js,mjs}\"",
-    "lint:py": "python3 -m ruff check docs fetch_pexels_urls.py",
-    "lint": "npm run lint:js && npm run format:js && npm run lint:py"
+    "lint": "npm run lint:js && npm run format:js"
   },
   "devDependencies": {
     "eslint": "8.57.0",

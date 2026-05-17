@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pexels Dynamic Wallpaper — a static web app (hosted on GitHub Pages at `docs/`) that displays a rotating slideshow of Pexels collection photos. Designed to be used as a desktop wallpaper source via Plash (macOS) or Lively (Windows). A Python script fetches photo URLs from the Pexels API and writes them to a local text file used as the fallback image source.
+Pexels Dynamic Wallpaper — a static web app (hosted on GitHub Pages at `docs/`) that displays a rotating slideshow of Pexels collection photos. Designed to be used as a desktop wallpaper source via Plash (macOS) or Lively (Windows). A Node script fetches photo URLs from the Pexels API and writes them to a local text file used as the fallback image source.
 
 ## Commands
 
@@ -15,19 +15,17 @@ npm test                    # Run Jest tests (uses --experimental-vm-modules for
 
 ### Linting
 ```bash
-npm run lint                # Run all linters (ESLint + Prettier + ruff)
+npm run lint                # Run all linters (ESLint + Prettier)
 npm run lint:js             # ESLint only on docs/js/**/*.{js,mjs}
 npm run format:js           # Prettier check on docs/js/**/*.{js,mjs}
-npm run lint:py             # ruff check on Python files
 ```
 
-### Python (photo URL fetcher)
+### Photo URL fetcher (Node)
 ```bash
-pip install -r requirements.txt   # python-dotenv, requests, ruff
-python fetch_pexels_urls.py       # Fetch URLs from Pexels API → docs/pexels_photo_urls.txt
-./update.sh                       # Shorthand for the above
+npm run fetch                              # node fetch_pexels_urls.mjs
+node --env-file=.env fetch_pexels_urls.mjs # load .env automatically (Node 20.6+)
 ```
-Requires `PEXELS_API_KEY` in `.env` (copy from `.env.example`) or as an environment variable.
+Requires `PEXELS_API_KEY` in `.env` (copy from `.env.example`) or as an environment variable. Zero npm dependencies — uses built-in `fetch` and `AbortController`.
 
 ## Architecture
 
@@ -47,8 +45,8 @@ Static site served by GitHub Pages. All JS uses native ES modules (`.mjs`).
 3. Settings stored in localStorage (not cookies) to avoid sending keys to server
 4. Settings dialog is hidden by default; only shown when user clicks the settings button
 
-### Backend (`fetch_pexels_urls.py`)
-Standalone Python script that fetches all photos from a hardcoded Pexels collection (`COLLECTION_ID = "vmnecek"`) with retry logic and rate limit (429) handling, writes URLs to `docs/pexels_photo_urls.txt`. Runs daily via GitHub Actions (`.github/workflows/update_photos.yml`).
+### Backend (`fetch_pexels_urls.mjs`)
+Standalone Node ESM script (zero deps) that fetches all photos from a hardcoded Pexels collection (`COLLECTION_ID = "vmnecek"`) with retry logic and rate limit (429) handling, writes URLs to `docs/pexels_photo_urls.txt` and metadata to `docs/pexels_photo_data.json`. Runs daily via GitHub Actions (`.github/workflows/update_photos.yml`).
 
 ### Tests (`__tests__/script.test.js`)
 Jest with jsdom. Tests import directly from the ESM modules. `jest.setup.js` provides `fetch`, `TextEncoder`, and `matchMedia` mocks.
@@ -56,7 +54,6 @@ Jest with jsdom. Tests import directly from the ESM modules. `jest.setup.js` pro
 ## Code Style
 
 - **JavaScript**: ESLint (recommended + prettier config), Prettier (single quotes, 100 char width, ES5 trailing commas). Browser ES2022, ESM modules. Unused vars prefixed with `_` are allowed.
-- **Python**: ruff with 100 char line length, E/F/I rule sets.
 - Tests are excluded from ESLint (`ignorePatterns: ['__tests__/**']`).
 
 ## Notes
