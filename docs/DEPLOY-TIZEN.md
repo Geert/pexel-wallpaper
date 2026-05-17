@@ -79,7 +79,8 @@ If you use the bundled Jellyfin2Samsung tooling instead of Tizen Studio's
 own `tizen`/`sdb`, the equivalent sequence is:
 
 ```bash
-TizenSdb resign        <wgt> <author.p12> <distributor.p12> <password>
+TizenSdb connect        <tv-ip>
+TizenSdb resign         <wgt> <author.p12> <distributor.p12> <password>
 TizenSdb permit-install <tv-ip> <device-profile.xml> /home/owner/share/tmp/sdk_tools
 TizenSdb install        <tv-ip> <wgt> /home/owner/share/tmp/sdk_tools
 TizenSdb launch         <tv-ip> PxlWallppr.TizenWallpaper
@@ -89,11 +90,27 @@ This route signs your build with Jellyfin2Samsung's pre-issued Samsung
 certificates and is the most reliable path when you do not have your own
 Samsung-signed distributor cert for the target TV's DUID.
 
+Two non-obvious gotchas with `TizenSdb` specifically:
+
+- An explicit `TizenSdb connect <tv-ip>` is required before `permit-install`,
+  even if the TV is pingable and TCP port 26101 is open. Skipping it produces
+  `No route to host` while pushing `device-profile.xml`.
+- The `.wgt` filename must not contain spaces. With a spaced name,
+  `TizenSdb install` prints `Installing…` and exits 0 without ever pushing
+  the file. Rename to e.g. `PexelWallpaper.wgt` first. Tizen Studio's own
+  `tizen install` does handle spaced names correctly.
+
+If you only have an unsigned `.wgt` (for example a plain `zip` of `docs/`
+when the Tizen CLI is not installed), `TizenSdb resign` will sign it in
+place — you do not need a pre-built signed package.
+
 ## Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
 | `sdb connect` fails, port 26101 *is* open | TV's `developerIP` field points at a different host. Fix on the TV remote and reboot. |
+| `TizenSdb permit-install` reports `No route to host` | Run `TizenSdb connect <tv-ip>` first; it does not auto-connect. |
+| `TizenSdb install` prints `Installing…` and exits 0 but nothing lands on the TV | `.wgt` filename contains spaces. Rename it (no spaces) and rerun. |
 | Install reports success but the app does not appear in the launcher | `.wgt` was signed with a distributor cert the TV does not trust. Re-sign with a Samsung-issued cert tied to this TV's DUID. |
 | App launches but cannot reach `images.pexels.com` or the photo JSON | CSP / access-origin mismatch in `docs/config.xml`. The shipped manifest already allows `images.pexels.com` and `geert.github.io`; verify it has not drifted. |
 | Old version keeps loading after install | TV caches the previous build. Uninstall first (`sdb shell 0 vd_appcontrol -e DELETE -p PxlWallppr.TizenWallpaper`) or bump `version` in `config.xml`. |
