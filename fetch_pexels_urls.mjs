@@ -10,7 +10,6 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_SECONDS = 2;
 
-const OUTPUT_FILE = 'docs/pexels_photo_urls.txt';
 const OUTPUT_JSON_FILE = 'docs/pexels_photo_data.json';
 
 const BASE_URL = 'https://api.pexels.com/v1/';
@@ -69,7 +68,6 @@ async function fetchWithRetry(url) {
 
 async function fetchPhotosFromCollection(collectionId) {
   console.log(`\nFetching photos from collection ID: ${collectionId}`);
-  const photoUrls = [];
   const photoData = [];
   let nextUrl = `${BASE_URL}collections/${collectionId}?per_page=${PHOTOS_PER_PAGE}`;
 
@@ -96,7 +94,6 @@ async function fetchPhotosFromCollection(collectionId) {
         );
         continue;
       }
-      photoUrls.push(photoSrc);
       photoData.push({
         id: item.id,
         imageUrl: photoSrc,
@@ -113,8 +110,8 @@ async function fetchPhotosFromCollection(collectionId) {
     nextUrl = data.next_page ? data.next_page.replace('/v1/v1/', '/v1/') : null;
   }
 
-  console.log(`Finished fetching. Total photos collected: ${photoUrls.length}`);
-  return { photoUrls, photoData };
+  console.log(`Finished fetching. Total photos collected: ${photoData.length}`);
+  return { photoData };
 }
 
 async function writeOutput(path, contents) {
@@ -126,16 +123,12 @@ console.log('Starting Pexels photo fetcher...');
 console.log(`Using API Key ending with: ...${API_KEY.slice(-4)}`);
 console.log(`Automated run: Using predefined COLLECTION_ID: ${COLLECTION_ID}`);
 
-const { photoUrls, photoData } = await fetchPhotosFromCollection(COLLECTION_ID);
+const { photoData } = await fetchPhotosFromCollection(COLLECTION_ID);
 
-if (photoUrls.length === 0) {
-  console.log('No photo URLs were fetched.');
+if (photoData.length === 0) {
+  console.log('No photos were fetched.');
   process.exit(0);
 }
-
-await writeOutput(OUTPUT_FILE, photoUrls.join('\n') + '\n');
-console.log(`\nSuccessfully fetched ${photoUrls.length} photo URLs.`);
-console.log(`Saved to: ${OUTPUT_FILE}`);
 
 const jsonOutput = {
   updatedAt: new Date().toISOString(),
@@ -144,4 +137,4 @@ const jsonOutput = {
   photos: photoData,
 };
 await writeOutput(OUTPUT_JSON_FILE, JSON.stringify(jsonOutput, null, 2) + '\n');
-console.log(`Saved metadata to: ${OUTPUT_JSON_FILE}`);
+console.log(`\nSuccessfully fetched ${photoData.length} photos. Saved to: ${OUTPUT_JSON_FILE}`);

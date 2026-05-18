@@ -17,7 +17,7 @@ const FALLBACK_TRANSLATIONS = {
     statusErrorGeneric: 'Something went wrong (HTTP {status}). Please try again later.',
     statusErrorNetwork: 'Network error while contacting Pexels. Check your connection and retry.',
     statusLocalFileNotFound:
-      'Default wallpaper file (pexels_photo_urls.txt) not found or empty. Run npm run fetch or configure a Pexels API source.',
+      'Default wallpaper data could not be loaded. Run npm run fetch or configure a Pexels API source.',
     usageLabel: 'Using',
     usagePlashMac: 'Plash on macOS',
     usageLivelyWindows: 'Lively on Windows',

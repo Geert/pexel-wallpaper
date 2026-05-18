@@ -4,7 +4,6 @@ import {
   PHOTO_SIZE_TO_DISPLAY,
   FETCH_USER_AGENT,
   PEXELS_PAGE_BASE_URL,
-  LOCAL_IMAGE_URLS_FILE,
   LOCAL_IMAGE_DATA_FILE,
 } from './config.mjs';
 import { cachePhotoData, getCachedPhotoData } from './storage.mjs';
@@ -363,44 +362,13 @@ export async function loadDefaultImageList({
   showStatus,
   hideStatus,
   localImageDataFile = LOCAL_IMAGE_DATA_FILE,
-  localImageUrlsFile = LOCAL_IMAGE_URLS_FILE,
   onMeta,
 }) {
-  // Try JSON with full metadata first
-  const jsonImages = await loadDefaultImageListFromJson(localImageDataFile, onMeta);
-  if (jsonImages) {
+  const images = await loadDefaultImageListFromJson(localImageDataFile, onMeta);
+  if (images) {
     hideStatus?.();
-    return jsonImages;
+    return images;
   }
-
-  // Fallback to plain text URL list
-  const response = await fetch(localImageUrlsFile);
-  if (!response.ok) {
-    showStatus(`${currentTranslations.statusLocalFileNotFound} (HTTP ${response.status})`, true, {
-      persistent: true,
-    });
-    return [];
-  }
-  const text = await response.text();
-  const images = text
-    .split('\n')
-    .map((url) => url.trim())
-    .filter(Boolean)
-    .map((url) => {
-      const id = extractPexelsId(url);
-      return {
-        imageUrl: url,
-        pageUrl: id ? `${PEXELS_PAGE_BASE_URL}${id}/` : url.includes('pexels.com') ? url : null,
-        photographerUrl: null,
-        id,
-      };
-    });
-
-  if (images.length === 0) {
-    showStatus(currentTranslations.statusLocalFileNotFound, true, { persistent: true });
-    return [];
-  }
-
-  hideStatus?.();
-  return images;
+  showStatus(currentTranslations.statusLocalFileNotFound, true, { persistent: true });
+  return [];
 }

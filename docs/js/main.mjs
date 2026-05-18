@@ -1,9 +1,7 @@
 import {
   APP_VERSION,
-  LOCAL_IMAGE_URLS_FILE,
   LOCAL_IMAGE_DATA_FILE,
   REMOTE_PHOTO_DATA_URL,
-  REMOTE_PHOTO_URLS_URL,
   CHANGE_INTERVAL_MS,
   STORAGE_KEYS,
 } from './config.mjs';
@@ -244,7 +242,6 @@ async function loadDefaults() {
       showStatus,
       hideStatus,
       localImageDataFile: isTizenTV() ? REMOTE_PHOTO_DATA_URL : LOCAL_IMAGE_DATA_FILE,
-      localImageUrlsFile: isTizenTV() ? REMOTE_PHOTO_URLS_URL : LOCAL_IMAGE_URLS_FILE,
       onMeta: (meta) => {
         photoMeta = meta;
       },
