@@ -31,6 +31,7 @@ let t = {};
 let slideshow;
 let uiVisible = false;
 let currentAttribution = null;
+let photoDataMeta = null;
 let fetchController = null;
 let plashObserver = null;
 
@@ -80,7 +81,13 @@ function instructionGroup() {
 function updateUsageIndicator(showDetails) {
   const el = $('usage-indicator');
   if (!el) return;
-  let text = `Photos provided by Pexels \u00b7 v${APP_VERSION}`;
+  const dayLabel = photoDataMeta?.updatedAt
+    ? new Date(photoDataMeta.updatedAt).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+      })
+    : null;
+  let text = `Photos provided by Pexels \u00b7 v${APP_VERSION}${dayLabel ? ' \u00b7 ' + dayLabel : ''}`;
   if (showDetails && currentAttribution) {
     if (currentAttribution.alt) text += ` \u00b7 ${currentAttribution.alt}`;
     if (currentAttribution.photographer) text += ` \u00b7 ${currentAttribution.photographer}`;
@@ -255,12 +262,14 @@ async function loadDefaults() {
       localImageDataFile: isTizenTV() ? REMOTE_PHOTO_DATA_URL : LOCAL_IMAGE_DATA_FILE,
       onMeta: (meta) => {
         photoMeta = meta;
+        photoDataMeta = meta;
       },
     });
     const normalized = normalizeEntries(images);
     if (normalized.length > 0) {
       slideshow.start(normalized);
       hideStatus();
+      updateUsageIndicator();
       if (photoMeta) {
         const template =
           photoMeta.source === 'cache' ? t.statusPhotosLoadedCache : t.statusPhotosLoadedFresh;
