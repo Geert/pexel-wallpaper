@@ -28,13 +28,13 @@ To get started, follow these steps which are also displayed in the settings form
 
 ### Samsung Smart TV (Tizen)
 
-The TV build runs entirely from the bundled `.wgt`; it does not contact the Pexels API and shows no settings UI. Only the photo metadata JSON and the photo images themselves are fetched at runtime (allowed by the Samsung Store CSP).
+The TV build runs entirely from the bundled `.wgt`; it does not contact the Pexels API and shows no settings UI. Only the photo metadata JSON (`pexels_photo_data.json`) and the photo images themselves are fetched at runtime (allowed by the Samsung Store CSP).
 
 1. **Enable Developer Mode** on the TV (Apps screen → `12345` on the remote, set the Host PC IP, reboot the TV).
 2. **Package** `docs/` with Tizen Studio's CLI: `cd docs && tizen package -t wgt -s <profile> -- .` (or build via the Tizen Studio GUI).
 3. **Install** via `sdb connect <tv-ip>` → `tizen install -n "Pexel Wallpaper.wgt" -t <device>`.
 
-Full instructions, the Jellyfin2Samsung sideload variant, and common troubleshooting live in [`docs/DEPLOY-TIZEN.md`](docs/DEPLOY-TIZEN.md).
+Full instructions — including the Jellyfin2Samsung sideload variant, the required explicit `sdb connect` before `permit-install`, the no-spaces-in-filename gotcha, and other troubleshooting — live in [`docs/DEPLOY-TIZEN.md`](docs/DEPLOY-TIZEN.md).
 
 Remote control:
 
@@ -51,14 +51,14 @@ Remote control:
 2.  **Provide Pexels Collection URL:**
     *   Paste the URL of the Pexels collection you wish to use as your wallpaper source (e.g., `https://www.pexels.com/collections/wallpapers-vmnecek/`).
 3.  **Start Slideshow:**
-    *   Click "Apply Settings & Start Slideshow".
+    *   Click "Save & start".
 
-If you prefer to run without an API key, the app falls back to the local list in `docs/pexels_photo_urls.txt`. Refresh that list anytime by running `npm run fetch` (requires `PEXELS_API_KEY` in your environment) or update the file manually with one image URL per line.
+If you prefer to run without an API key, the app falls back to a bundled `docs/pexels_photo_data.json` snapshot. That file is refreshed daily by a GitHub Actions workflow; you can also regenerate it locally (see below).
 
 ## Updating Cached Wallpapers
 
 1. Copy `.env.example` to `.env` and add your `PEXELS_API_KEY`.
-2. Run `node --env-file=.env fetch_pexels_urls.mjs` (or `npm run fetch` with `PEXELS_API_KEY` exported) to regenerate `docs/pexels_photo_urls.txt` with the latest items from your default collection.
+2. Run `node --env-file=.env fetch_pexels_urls.mjs` (or `npm run fetch` with `PEXELS_API_KEY` exported) to regenerate `docs/pexels_photo_data.json` with the latest items from the configured collection.
 
 ## Development
 
@@ -72,8 +72,9 @@ Your Desktop will now cycle through images from your selected Pexels collection!
 *   Direct integration with Pexels collections via their API (Plash/Lively/browser).
 *   User-friendly setup through an interactive form (Plash/Lively/browser).
 *   Multi-language support (EN, NL, DE, FR).
-*   Fallback to local image URLs if no API key is provided (requires `pexels_photo_urls.txt` in the `docs/` folder with image URLs, one per line).
+*   Bundled `pexels_photo_data.json` snapshot as a fallback when no API key is configured (refreshed daily by GitHub Actions).
 *   Samsung TV build (Tizen `.wgt`) that fetches photo metadata at runtime from GitHub Pages; no API key needed.
+*   Cache-first start with background refresh on the TV: instant slideshow from the previous launch's data, then quietly updates to the latest.
 *   Keyboard / remote navigation (arrow keys + OK) works in any interactive frontend.
 
 ## License

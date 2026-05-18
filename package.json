@@ -1,7 +1,23 @@
 {
   "name": "pexel-wallpaper",
-  "version": "1.0.0",
-  "description": "Tests voor Pexel Wallpaper",
+  "version": "1.11.0",
+  "private": true,
+  "description": "Dynamic Pexels-powered wallpaper slideshow for macOS (Plash), Windows (Lively), and Samsung Smart TVs (Tizen).",
+  "homepage": "https://geert.github.io/pexel-wallpaper/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Geert/pexel-wallpaper.git"
+  },
+  "license": "MIT",
+  "keywords": [
+    "pexels",
+    "wallpaper",
+    "slideshow",
+    "tizen",
+    "samsung-tv",
+    "plash",
+    "lively"
+  ],
   "scripts": {
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "fetch": "node fetch_pexels_urls.mjs",
