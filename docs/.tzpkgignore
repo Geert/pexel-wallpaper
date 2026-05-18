@@ -6,5 +6,3 @@
 # If your Tizen Studio version does not honor .tzpkgignore, configure these
 # exclusions manually under Project Properties > Tizen Studio > Package.
 pexels_photo_data.json
-manifest.json
-superpowers/
