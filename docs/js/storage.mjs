@@ -90,10 +90,7 @@ const PHOTO_DATA_CACHE_KEY = 'pexelWallpaper.photoDataCache';
 
 export function cachePhotoData(url, data) {
   try {
-    localStorage.setItem(
-      PHOTO_DATA_CACHE_KEY,
-      JSON.stringify({ timestamp: Date.now(), url, data })
-    );
+    localStorage.setItem(PHOTO_DATA_CACHE_KEY, JSON.stringify({ url, data }));
   } catch (error) {
     if (error.name !== 'QuotaExceededError') {
       console.warn('Error caching photo data:', error);

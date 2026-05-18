@@ -37,6 +37,17 @@ let plashObserver = null;
 // --- DOM Helpers ---
 const $ = (id) => document.getElementById(id);
 
+// Keyboard / Samsung TV remote keys (numeric keyCode values).
+const KEYS = {
+  ENTER: 13,
+  PAUSE: 19,
+  LEFT: 37,
+  RIGHT: 39,
+  SAMSUNG_PLAY: 415,
+  SAMSUNG_BACK: 10009,
+  SAMSUNG_PLAY_PAUSE: 10252,
+};
+
 // --- Environment Detection ---
 
 export function detectEnvironment() {
@@ -251,18 +262,21 @@ async function loadDefaults() {
       slideshow.start(normalized);
       hideStatus();
       if (photoMeta) {
-        const sourceLabel = photoMeta.source === 'cache' ? 'cache' : 'server';
-        const dateLabel = photoMeta.updatedAt
-          ? new Date(photoMeta.updatedAt).toLocaleString(undefined, {
-              dateStyle: 'short',
-              timeStyle: 'short',
-            })
-          : '—';
-        showStatus(
-          `${normalized.length} foto's geladen (${sourceLabel}, bijgewerkt ${dateLabel})`,
-          false,
-          { duration: 5000 }
-        );
+        const template =
+          photoMeta.source === 'cache' ? t.statusPhotosLoadedCache : t.statusPhotosLoadedFresh;
+        if (template) {
+          const dateLabel = photoMeta.updatedAt
+            ? new Date(photoMeta.updatedAt).toLocaleString(undefined, {
+                dateStyle: 'short',
+                timeStyle: 'short',
+              })
+            : '—';
+          showStatus(
+            template.replace('{count}', normalized.length).replace('{date}', dateLabel),
+            false,
+            { duration: 5000 }
+          );
+        }
       }
     }
   } catch (error) {
@@ -400,6 +414,9 @@ function translatePage() {
   const resetBtn = $('resetButton');
   if (resetBtn) resetBtn.textContent = t.resetButtonText;
 
+  const summary = $('instructions-summary');
+  if (summary && t.instructionsSummary) summary.textContent = t.instructionsSummary;
+
   applyInstructions();
   updateUsageIndicator();
 }
@@ -490,25 +507,21 @@ function attachEventListeners() {
     if (formOpen) return;
 
     switch (e.keyCode) {
-      case 415: // Samsung Play
-      case 10252: // Samsung Play/Pause
-      case 19: // Samsung Pause
-      case 13: // Enter / OK
+      case KEYS.SAMSUNG_PLAY:
+      case KEYS.SAMSUNG_PLAY_PAUSE:
+      case KEYS.PAUSE:
+      case KEYS.ENTER:
         togglePhotoInfo();
         e.preventDefault();
         break;
-      case 39: // Right arrow
+      case KEYS.RIGHT:
         slideshow?.next();
         break;
-      case 37: // Left arrow
+      case KEYS.LEFT:
         slideshow?.prev();
         break;
-      case 10009: // Samsung Back
-        try {
-          tizen.application.getCurrentApplication().exit();
-        } catch (_e) {
-          /* not on Tizen */
-        }
+      case KEYS.SAMSUNG_BACK:
+        if (isTizenTV()) tizen.application.getCurrentApplication().exit();
         break;
       default:
         if (e.key === 'i' || e.key === 'I') togglePhotoInfo();
@@ -554,26 +567,19 @@ function attachEventListeners() {
 // --- Tizen TV Integration ---
 
 function initTizen() {
+  if (!isTizenTV()) return;
   try {
-    tizen.power.request('SCREEN', 'SCREEN_NORMAL');
-  } catch (_e) {
-    /* not on Tizen */
-  }
-  try {
-    webapis.appcommon.setScreenSaver(
+    tizen.power?.request('SCREEN', 'SCREEN_NORMAL');
+    webapis?.appcommon?.setScreenSaver?.(
       webapis.appcommon.AppCommonScreenSaverState.SCREEN_SAVER_OFF,
-      function () {},
-      function () {}
+      () => {},
+      () => {}
     );
-  } catch (_e) {
-    /* not on Tizen */
-  }
-  try {
-    tizen.tvinputdevice.registerKey('MediaPlay');
-    tizen.tvinputdevice.registerKey('MediaPlayPause');
-    tizen.tvinputdevice.registerKey('MediaPause');
-  } catch (_e) {
-    /* not on Tizen */
+    ['MediaPlay', 'MediaPlayPause', 'MediaPause'].forEach((key) =>
+      tizen.tvinputdevice?.registerKey(key)
+    );
+  } catch (error) {
+    console.warn('Tizen init failed:', error);
   }
 }
 

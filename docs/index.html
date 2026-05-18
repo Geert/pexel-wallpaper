@@ -27,23 +27,26 @@
     <div id="input-container" class="hidden">
       <button id="closeFormButton" title="Close settings" aria-label="Close settings">&times;</button>
       <h2>Pexels Wallpapers</h2>
-      <ol>
-        <li>
-          Install Plash:
-          <a
-            href="https://apps.apple.com/app/plash/id1494023538"
-            target="_blank"
-            class="plash-button"
-            >Open Plash in App Store</a
-          >
-        </li>
-        <li>In Plash, under 'Websites', add this URL: <code id="current-url-display"></code></li>
-        <li>Enable Browsing Mode in Plash and continue via the screen on your desktop.</li>
-        <li>Enter your Pexels API key below.</li>
-        <li>
-          Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen.
-        </li>
-      </ol>
+      <details id="instructions-details">
+        <summary id="instructions-summary">Setup instructions</summary>
+        <ol>
+          <li>
+            Install Plash:
+            <a
+              href="https://apps.apple.com/app/plash/id1494023538"
+              target="_blank"
+              class="plash-button"
+              >Open Plash in App Store</a
+            >
+          </li>
+          <li>In Plash, under 'Websites', add this URL: <code id="current-url-display"></code></li>
+          <li>Enable Browsing Mode in Plash and continue via the screen on your desktop.</li>
+          <li>Enter your Pexels API key below.</li>
+          <li>
+            Paste the URL of a Pexels Collection below, from which your wallpapers will be chosen.
+          </li>
+        </ol>
+      </details>
       <div>
         <label for="apiKeyInput"
           >Pexels API Key:
