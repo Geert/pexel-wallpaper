@@ -90,11 +90,27 @@ const PHOTO_DATA_CACHE_KEY = 'pexelWallpaper.photoDataCache';
 
 export function cachePhotoData(url, data) {
   try {
-    localStorage.setItem(PHOTO_DATA_CACHE_KEY, JSON.stringify({ url, data }));
+    // Trim photo objects to only the fields the slideshow actually reads,
+    // keeping the cache small enough to fit Tizen webview localStorage quotas.
+    const trimmed = {
+      updatedAt: data?.updatedAt || null,
+      photos: Array.isArray(data?.photos)
+        ? data.photos.map((p) => ({
+            id: p.id,
+            imageUrl: p.imageUrl,
+            pageUrl: p.pageUrl,
+            photographer: p.photographer,
+            photographerUrl: p.photographerUrl,
+            alt: p.alt,
+          }))
+        : [],
+    };
+    localStorage.setItem(
+      PHOTO_DATA_CACHE_KEY,
+      JSON.stringify({ url, cachedAt: Date.now(), data: trimmed })
+    );
   } catch (error) {
-    if (error.name !== 'QuotaExceededError') {
-      console.warn('Error caching photo data:', error);
-    }
+    console.warn('Error caching photo data:', error?.name || error);
   }
 }
 
@@ -104,7 +120,7 @@ export function getCachedPhotoData(url) {
     if (!raw) return null;
     const entry = JSON.parse(raw);
     if (entry.url !== url) return null;
-    return entry.data;
+    return { ...entry.data, cachedAt: entry.cachedAt || null };
   } catch (_e) {
     return null;
   }

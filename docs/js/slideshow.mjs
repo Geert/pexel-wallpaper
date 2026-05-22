@@ -330,9 +330,22 @@ function refreshPhotoDataCache(url) {
     .catch(() => {});
 }
 
+const CACHE_FRESH_MS = 24 * 60 * 60 * 1000;
+
+function staleCacheFallback(cached, onMeta) {
+  const entries = mapPhotoEntries(cached?.photos);
+  if (!entries) return null;
+  onMeta?.({ source: 'cache', updatedAt: cached.updatedAt });
+  return entries;
+}
+
 async function loadDefaultImageListFromJson(localImageDataFile, onMeta) {
   const cached = getCachedPhotoData(localImageDataFile);
-  if (cached) {
+  const cacheIsFresh =
+    cached?.cachedAt && Date.now() - cached.cachedAt < CACHE_FRESH_MS;
+
+  // Fresh cache (<24h): serve instantly, refresh in background.
+  if (cached && cacheIsFresh) {
     const entries = mapPhotoEntries(cached.photos);
     if (entries) {
       onMeta?.({ source: 'cache', updatedAt: cached.updatedAt });
@@ -341,9 +354,10 @@ async function loadDefaultImageListFromJson(localImageDataFile, onMeta) {
     }
   }
 
+  // No cache, or cache is stale: await a fresh fetch.
   try {
     const response = await fetch(localImageDataFile);
-    if (!response.ok) return null;
+    if (!response.ok) return staleCacheFallback(cached, onMeta);
     const data = await response.json();
     const entries = mapPhotoEntries(data?.photos);
     if (entries) {
@@ -351,9 +365,9 @@ async function loadDefaultImageListFromJson(localImageDataFile, onMeta) {
       onMeta?.({ source: 'fresh', updatedAt: data?.updatedAt });
       return entries;
     }
-    return null;
+    return staleCacheFallback(cached, onMeta);
   } catch (_e) {
-    return null;
+    return staleCacheFallback(cached, onMeta);
   }
 }
 

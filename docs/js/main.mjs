@@ -87,7 +87,8 @@ function updateUsageIndicator(showDetails) {
         month: 'short',
       })
     : null;
-  let text = `Photos provided by Pexels \u00b7 v${APP_VERSION}${dayLabel ? ' \u00b7 ' + dayLabel : ''}`;
+  const sourceLabel = photoDataMeta?.source ? ` \u00b7 ${photoDataMeta.source}` : '';
+  let text = `Photos provided by Pexels \u00b7 v${APP_VERSION}${dayLabel ? ' \u00b7 ' + dayLabel : ''}${sourceLabel}`;
   if (showDetails && currentAttribution) {
     if (currentAttribution.alt) text += ` \u00b7 ${currentAttribution.alt}`;
     if (currentAttribution.photographer) text += ` \u00b7 ${currentAttribution.photographer}`;
