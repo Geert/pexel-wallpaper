@@ -1,0 +1,36 @@
+name: Frame sync
+
+on:
+  push:
+    paths: ['frame/**', '.github/workflows/frame.yml']
+  pull_request:
+    paths: ['frame/**', '.github/workflows/frame.yml']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Lint
+        run: uvx ruff check --select E,F,W,B,I --line-length 100 frame
+      - name: Unit tests
+        run: uv run --python ${{ matrix.python }} --no-project python -m unittest discover frame -v
+      - name: Dry run with the published collection
+        run: uv run --python ${{ matrix.python }} frame/frame_sync.py --dry-run
+
+  pexels-api:
+    # Reads the collection through the Pexels API. Secrets are not available
+    # to pull requests from forks, so this only runs in this repository.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Dry run with --collection
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: uv run frame/frame_sync.py --collection https://www.pexels.com/collections/wallpapers-vmnecek/ --dry-run

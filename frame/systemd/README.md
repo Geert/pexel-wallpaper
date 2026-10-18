@@ -1,27 +1,8 @@
-# Daily sync on rzdm5
+# systemd units
 
-rzdm5 is on the same network as the TV. The timer runs `frame_sync.py` every
-morning at 05:00. The service pulls `main` first, so a merge is the deploy.
+`pexel-frame.timer` runs `pexel-frame.service` every morning at 05:00 (the
+system's time zone). The service pulls `~/pexel-wallpaper` first, runs
+`frame_sync.py` with the settings from `~/.config/pexel-frame/env`, and
+retries every 30 minutes for about three hours when the TV does not answer.
 
-Install, once, as the user `geert`:
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-git clone https://github.com/Geert/pexel-wallpaper.git ~/pexel-wallpaper
-mkdir -p ~/.config/systemd/user
-ln -sf ~/pexel-wallpaper/frame/systemd/pexel-frame.{service,timer} ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now pexel-frame.timer
-```
-
-Settings go in `~/.config/pexel-frame/env`, for example `FRAME_HOST=192.168.2.50`.
-Without `FRAME_HOST` the script finds the TV on the network and remembers it.
-
-```bash
-systemctl --user start pexel-frame.service    # sync now
-journalctl --user -u pexel-frame.service -f   # follow the log
-systemctl --user list-timers pexel-frame.timer
-```
-
-The user needs lingering (`loginctl show-user geert -p Linger` says `yes`),
-so the timer runs without a login.
+Installation and settings: see [the Frame README](../README.md#linux-and-raspberry-pi-systemd).

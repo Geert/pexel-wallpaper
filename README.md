@@ -1,12 +1,11 @@
 # Pexels Dynamic Wallpaper
 
-Set your desktop or TV to a dynamic slideshow of beautiful images from your favorite Pexels collections. The web app powers macOS and Windows; a sync script brings the same collection to a Frame TV:
+Set your desktop or TV to a slideshow of photos from a [Pexels](https://www.pexels.com) collection. This repository has two tools:
 
-- **macOS** via [Plash](https://apps.apple.com/us/app/plash/id1494023538) — hosts the live URL as a desktop background
-- **Windows** via [Lively](https://apps.microsoft.com/detail/9NTM2QC6QWS7) — same idea on Windows
-- **Samsung The Frame TV** via Art Mode — a sync script puts the collection photos on the TV, and the TV's own slideshow shows them
+- **A wallpaper web app** for the desktop: [Plash](https://apps.apple.com/us/app/plash/id1494023538) on macOS and [Lively](https://apps.microsoft.com/detail/9NTM2QC6QWS7) on Windows show the live page as the desktop background. [Live demo](https://geert.github.io/pexel-wallpaper/)
+- **[A sync script for Samsung The Frame](frame/README.md)**: it puts the photos in the TV's Art Mode over the local network, and the TV's own slideshow shows them. Nothing is installed on the TV.
 
-[Live Demo](https://geert.github.io/pexel-wallpaper/)
+Both use the [wallpapers](https://www.pexels.com/collections/wallpapers-vmnecek/) collection by default, with 16:9 photos at 4K or more. Both can use any other Pexels collection with a free Pexels API key.
 
 ## How to Use
 
@@ -26,32 +25,15 @@ To get started, follow these steps which are also displayed in the settings form
 2. **Add Web App to Lively:**
    *  In Lively, choose the + button, add this URL: `https://geert.github.io/pexel-wallpaper/`
 
-### Samsung The Frame TV (Art Mode)
-
-[`frame/frame_sync.py`](frame/frame_sync.py) works like [drnic/samsung-tv-art](https://github.com/drnic/samsung-tv-art): nothing is installed on the TV. A computer on the same network uploads photos to the Art Mode of the TV over its local WebSocket API ([samsungtvws](https://github.com/xchwarze/samsung-tv-ws-api)), and turns on the Art Mode slideshow.
-
-By default every landscape photo of the collection goes to *My Photos* on the TV, and the slideshow runs on *My Photos*. Each daily run uploads photos that are new in the collection and deletes photos that left it. With `--photos` and `--replace` it keeps a rotating set instead. It reads the collection from `pexels_photo_data.json` on GitHub Pages and asks the Pexels CDN for a 3840x2160 crop of each photo (about 1.5 MB). It only deletes images it uploaded itself. When the TV is full, it stops uploading and keeps what is on.
+### Samsung The Frame TV
 
 ```bash
-uv run frame/frame_sync.py --dry-run   # print the plan
-uv run frame/frame_sync.py             # sync now
-uv run frame/frame_sync.py info        # art mode, current image, slideshow
+git clone https://github.com/Geert/pexel-wallpaper.git && cd pexel-wallpaper/frame
+uv run frame_sync.py pair    # select Allow on the TV
+uv run frame_sync.py         # upload the collection and start the slideshow
 ```
 
-| Option | Environment | Default | |
-|---|---|---|---|
-| `--photos` | `FRAME_PHOTOS` | `0` (all) | photos on the TV at once |
-| `--minutes` | `FRAME_MINUTES` | `15` | minutes per photo |
-| `--replace` | `FRAME_REPLACE` | `0` | oldest uploads replaced per run |
-| `--matte` | `FRAME_MATTE` | `none` | e.g. `shadowbox_polar` |
-| `--host` | `FRAME_HOST` | found on the network | IP address of the TV |
-| `--mac` | `FRAME_MAC` | found on the network | for Wake-on-LAN |
-
-With all 2004 photos and 15 minutes per photo, the slideshow takes about 21 days. For a daily set instead, `FRAME_PHOTOS=100 FRAME_REPLACE=100` gives 25 hours of new photos every day. The state (which content id holds which Pexels photo) and the pairing token live in `~/.config/pexel-frame/`.
-
-The TV must be on or in Art Mode to answer; when it is fully off, its Wi-Fi sleeps. Turn on *Settings > General > Network > Expert Settings > Power On with Mobile*, and give the TV a DHCP reservation. On the first connection the TV shows an "Allow" prompt for about 30 seconds; select *Allow* with the remote. On this TV (2024, Art API 5) the prompt only comes on the remote-control channel, and the Art Mode channel waits silently without a token. Art API 5 answers `set_slideshow_status`, not auto rotation, and cannot mark own photos as favourites.
-
-The daily run on rzdm5 is a systemd user timer, see [`frame/systemd/`](frame/systemd/). The tests run with `python3 -m unittest discover frame`.
+Requirements, settings, a daily schedule (systemd, launchd, cron) and troubleshooting: see [`frame/README.md`](frame/README.md).
 
 ### Configure Pexels Wallpaper
 1.  **Enter Pexels API Key:**
@@ -81,14 +63,14 @@ Your Desktop will now cycle through images from your selected Pexels collection!
 *   User-friendly setup through an interactive form (Plash/Lively/browser).
 *   Multi-language support (EN, NL, DE, FR).
 *   Bundled `pexels_photo_data.json` snapshot as a fallback when no API key is configured (refreshed daily by GitHub Actions).
-*   Samsung The Frame TV: a daily, rotating set of collection photos in Art Mode; no app on the TV.
+*   Samsung The Frame TV: the whole collection, or a daily rotating set, in Art Mode; no app on the TV ([details](frame/README.md)).
 *   Cache-first start with background refresh: instant slideshow from the previous launch's data, then quietly updates to the latest.
 *   Keyboard navigation (arrow keys + Enter) works in any interactive frontend.
 
 ## License
 
-This project is licensed under the terms of the [LICENSE](LICENSE) file.
+The code is under the [MIT license](LICENSE). Photos come from [Pexels](https://www.pexels.com) under the [Pexels license](https://www.pexels.com/license/).
 
 ## Acknowledgements
 
-A special thank you to the creators of [Plash](https://sindresorhus.com/plash) for providing such a versatile tool for macOS customization.
+A special thank you to the creators of [Plash](https://sindresorhus.com/plash) for providing such a versatile tool for macOS customization, and to [drnic/samsung-tv-art](https://github.com/drnic/samsung-tv-art) and [samsungtvws](https://github.com/xchwarze/samsung-tv-ws-api) for showing how to drive the Art Mode of The Frame.
