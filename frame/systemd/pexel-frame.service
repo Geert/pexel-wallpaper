@@ -13,6 +13,6 @@ ExecStartPre=-/usr/bin/git pull --ff-only --quiet
 ExecStart=%h/.local/bin/uv run --quiet frame/frame_sync.py
 # Optional settings: FRAME_HOST, FRAME_MAC, FRAME_PHOTOS, FRAME_MINUTES, FRAME_REPLACE, FRAME_MATTE.
 EnvironmentFile=-%h/.config/pexel-frame/env
-TimeoutStartSec=2h
+TimeoutStartSec=8h
 Restart=on-failure
 RestartSec=30min

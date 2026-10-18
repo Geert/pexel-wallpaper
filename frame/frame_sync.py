@@ -2,13 +2,14 @@
 # requires-python = ">=3.11"
 # dependencies = ["samsungtvws>=3.0.6"]
 # ///
-"""Keep a rotating set of Pexels photos in the Art Mode of a Samsung The Frame TV.
+"""Keep the Pexels collection in the Art Mode of a Samsung The Frame TV.
 
-Every run replaces the photos this script put on the TV with photos from the
-collection that were on the TV longest ago (or never). It marks them as
-favourites and runs the Art Mode slideshow on Favourites, so your own photos
-in My Photos stay on the TV but out of the slideshow. It only deletes images
-it uploaded itself.
+By default every photo of the collection goes to My Photos on the TV, and the
+Art Mode slideshow runs on My Photos. Each run uploads photos that are new in
+the collection and deletes photos that left it. With --photos and --replace
+it keeps a rotating set instead: every run replaces the oldest uploads with
+photos that were on the TV longest ago, or never. It only deletes images it
+uploaded itself. When the TV is full, it stops uploading and keeps what is on.
 
 Run it on a computer on the same network as the TV:
 
@@ -33,8 +34,7 @@ from datetime import date
 from pathlib import Path
 
 PHOTO_DATA_URL = "https://geert.github.io/pexel-wallpaper/pexels_photo_data.json"
-MY_PHOTOS = "MY-C0002"  # uploads land here
-FAVOURITES = "MY-C0004"  # the slideshow runs here
+MY_PHOTOS = "MY-C0002"  # uploads land here, and the slideshow runs here
 SCREEN = (3840, 2160)
 CONFIG_DIR = Path(os.environ.get("FRAME_CONFIG_DIR", Path.home() / ".config" / "pexel-frame"))
 STATE_FILE = CONFIG_DIR / "state.json"
@@ -161,7 +161,7 @@ def new_slideshow_api(art):
 
 def start_slideshow(art, minutes):
     fn = art.set_slideshow_status if new_slideshow_api(art) else art.set_auto_rotation_status
-    return tv_call(60, fn, duration=minutes, type=True, category_id=FAVOURITES)
+    return tv_call(60, fn, duration=minutes, type=True, category_id=MY_PHOTOS)
 
 
 def slideshow_status(art):
@@ -261,9 +261,9 @@ def cmd_sync(args):
         if missing:
             log(f"{len(missing)} uploads were removed from the TV by hand")
 
-    replace = args.photos if args.replace is None else args.replace
+    count = args.photos or len(photos)
     to_delete, to_upload = plan(
-        photos, state["uploaded"], state["lastOnTv"], args.photos, replace, random.Random()
+        photos, state["uploaded"], state["lastOnTv"], count, args.replace, random.Random()
     )
     log(f"plan: upload {len(to_upload)}, delete {len(to_delete)}, "
         f"keep {len(state['uploaded']) - len(to_delete)}")
@@ -282,13 +282,16 @@ def cmd_sync(args):
         except (OSError, ValueError) as e:
             log(f"skip {photo['id']}: {e}")
             continue
-        content_id = tv_call(
-            180, art.upload, data, file_type="jpg", matte=args.matte, portrait_matte=args.matte
-        )
+        try:
+            content_id = tv_call(
+                180, art.upload, data, file_type="jpg", matte=args.matte, portrait_matte=args.matte
+            )
+        except Exception as e:  # noqa: BLE001 - samsungtvws raises several types
+            log(f"upload of {photo['id']} failed, the TV may be full: {type(e).__name__}: {e}")
+            break
         state["uploaded"][content_id] = {"pexelsId": photo["id"], "since": today}
         state["lastOnTv"][str(photo["id"])] = today
         uploaded += 1
-        favourite(art, content_id)
         if pending:
             delete(art, state, [pending.pop(0)])
         save_state(state)
@@ -299,21 +302,9 @@ def cmd_sync(args):
         state["lastOnTv"][str(u["pexelsId"])] = today
     save_state(state)
 
-    # Uploads from an earlier run that never became a favourite.
-    favourites = {i["content_id"] for i in tv_call(60, art.available, FAVOURITES)}
-    for content_id in state["uploaded"]:
-        if content_id not in favourites:
-            favourite(art, content_id)
-
     start_slideshow(art, args.minutes)
-    log(f"slideshow on Favourites: {len(state['uploaded'])} photos, {args.minutes} minutes each")
-
-
-def favourite(art, content_id):
-    try:
-        tv_call(60, art.set_favourite, content_id, "on")
-    except TVTimeout as e:
-        log(f"warning: {e}")
+    log(f"slideshow on My Photos: {len(state['uploaded'])} photos from Pexels, "
+        f"{args.minutes} minutes each")
 
 
 def delete(art, state, content_ids):
@@ -332,7 +323,6 @@ def cmd_info(args):
         "current": tv_call(30, art.get_current),
         "slideshow": slideshow_status(art),
         "my_photos": len(tv_call(60, art.available, MY_PHOTOS)),
-        "favourites": len(tv_call(60, art.available, FAVOURITES)),
         "uploaded_by_sync": len(state["uploaded"]),
     }, indent=2))
 
@@ -347,14 +337,12 @@ def main():
                         help="IP address of the TV (FRAME_HOST); found on the network if omitted")
     parser.add_argument("--mac", default=os.environ.get("FRAME_MAC"),
                         help="MAC address for Wake-on-LAN (FRAME_MAC)")
-    parser.add_argument("--photos", type=int, default=env_int("FRAME_PHOTOS", 100),
-                        help="photos on the TV at once (FRAME_PHOTOS, default 100)")
+    parser.add_argument("--photos", type=int, default=env_int("FRAME_PHOTOS", 0),
+                        help="photos on the TV at once, 0 for all (FRAME_PHOTOS, default all)")
     parser.add_argument("--minutes", type=int, default=env_int("FRAME_MINUTES", 15),
                         help="minutes per photo (FRAME_MINUTES, default 15)")
-    parser.add_argument("--replace", type=int,
-                        default=int(os.environ["FRAME_REPLACE"]) if "FRAME_REPLACE" in os.environ
-                        else None,
-                        help="photos to replace per run (FRAME_REPLACE, default all)")
+    parser.add_argument("--replace", type=int, default=env_int("FRAME_REPLACE", 0),
+                        help="oldest uploads to replace per run (FRAME_REPLACE, default 0)")
     parser.add_argument("--matte", default=os.environ.get("FRAME_MATTE", "none"),
                         help="matte, e.g. none or shadowbox_polar (FRAME_MATTE, default none)")
     parser.add_argument("--photo-data-url", default=os.environ.get("PHOTO_DATA_URL", PHOTO_DATA_URL))

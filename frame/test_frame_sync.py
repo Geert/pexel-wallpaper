@@ -60,6 +60,11 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(len(delete), 3)
         self.assertCountEqual([p["id"] for p in new], [0, 1, 2])
 
+    def test_all_photos_uploads_only_new_ones_and_drops_gone_ones(self):
+        delete, new = self.run_plan(photos(5), uploads([0, 1, 2, 99]), count=5, replace=0)
+        self.assertEqual(delete, ["MY_F0099"])
+        self.assertCountEqual([p["id"] for p in new], [3, 4])
+
     def test_screen_url_asks_the_cdn_for_a_4k_crop(self):
         self.assertEqual(
             screen_url(photos(1)[0]),
