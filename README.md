@@ -4,7 +4,7 @@ Set your desktop or TV to a dynamic slideshow of beautiful images from your favo
 
 - **macOS** via [Plash](https://apps.apple.com/us/app/plash/id1494023538) — hosts the live URL as a desktop background
 - **Windows** via [Lively](https://apps.microsoft.com/detail/9NTM2QC6QWS7) — same idea on Windows
-- **Samsung The Frame TV** via Art Mode — a sync script puts a daily set of collection photos on the TV, and the TV's own slideshow shows them
+- **Samsung The Frame TV** via Art Mode — a sync script puts the collection photos on the TV, and the TV's own slideshow shows them
 
 [Live Demo](https://geert.github.io/pexel-wallpaper/)
 
@@ -30,7 +30,7 @@ To get started, follow these steps which are also displayed in the settings form
 
 [`frame/frame_sync.py`](frame/frame_sync.py) works like [drnic/samsung-tv-art](https://github.com/drnic/samsung-tv-art): nothing is installed on the TV. A computer on the same network uploads photos to the Art Mode of the TV over its local WebSocket API ([samsungtvws](https://github.com/xchwarze/samsung-tv-ws-api)), and turns on the Art Mode slideshow.
 
-Every run replaces the photos it uploaded before with photos from the collection that were on the TV longest ago, or never. It reads the collection from `pexels_photo_data.json` on GitHub Pages and asks the Pexels CDN for a 3840x2160 crop of each photo. It only deletes images it uploaded itself, so your own photos in *My Photos* stay.
+By default every landscape photo of the collection goes to *My Photos* on the TV, and the slideshow runs on *My Photos*. Each daily run uploads photos that are new in the collection and deletes photos that left it. With `--photos` and `--replace` it keeps a rotating set instead. It reads the collection from `pexels_photo_data.json` on GitHub Pages and asks the Pexels CDN for a 3840x2160 crop of each photo (about 1.5 MB). It only deletes images it uploaded itself. When the TV is full, it stops uploading and keeps what is on.
 
 ```bash
 uv run frame/frame_sync.py --dry-run   # print the plan
@@ -40,16 +40,16 @@ uv run frame/frame_sync.py info        # art mode, current image, slideshow
 
 | Option | Environment | Default | |
 |---|---|---|---|
-| `--photos` | `FRAME_PHOTOS` | `100` | photos on the TV at once |
+| `--photos` | `FRAME_PHOTOS` | `0` (all) | photos on the TV at once |
 | `--minutes` | `FRAME_MINUTES` | `15` | minutes per photo |
-| `--replace` | `FRAME_REPLACE` | all | photos replaced per run |
+| `--replace` | `FRAME_REPLACE` | `0` | oldest uploads replaced per run |
 | `--matte` | `FRAME_MATTE` | `none` | e.g. `shadowbox_polar` |
 | `--host` | `FRAME_HOST` | found on the network | IP address of the TV |
 | `--mac` | `FRAME_MAC` | found on the network | for Wake-on-LAN |
 
-With 100 photos and 15 minutes per photo the slideshow lasts 25 hours, so a daily run shows a different photo all day. The state (which content id holds which Pexels photo) and the pairing token live in `~/.config/pexel-frame/`.
+With all 2004 photos and 15 minutes per photo, the slideshow takes about 21 days. For a daily set instead, `FRAME_PHOTOS=100 FRAME_REPLACE=100` gives 25 hours of new photos every day. The state (which content id holds which Pexels photo) and the pairing token live in `~/.config/pexel-frame/`.
 
-The TV must be on or in Art Mode to answer; when it is fully off, its Wi-Fi sleeps. Turn on *Settings > General > Network > Expert Settings > Power On with Mobile*, and give the TV a DHCP reservation. If the TV shows an "Allow" prompt on the first connection, select *Allow* with the remote.
+The TV must be on or in Art Mode to answer; when it is fully off, its Wi-Fi sleeps. Turn on *Settings > General > Network > Expert Settings > Power On with Mobile*, and give the TV a DHCP reservation. On the first connection the TV shows an "Allow" prompt for about 30 seconds; select *Allow* with the remote. On this TV (2024, Art API 5) the prompt only comes on the remote-control channel, and the Art Mode channel waits silently without a token. Art API 5 answers `set_slideshow_status`, not auto rotation, and cannot mark own photos as favourites.
 
 The daily run on rzdm5 is a systemd user timer, see [`frame/systemd/`](frame/systemd/). The tests run with `python3 -m unittest discover frame`.
 
