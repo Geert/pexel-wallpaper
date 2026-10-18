@@ -1,0 +1,18 @@
+[Unit]
+Description=Sync Pexels photos to the Art Mode of the Frame TV
+Wants=network-online.target
+After=network-online.target
+# Retry for about three hours when the TV does not answer.
+StartLimitIntervalSec=6h
+StartLimitBurst=7
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/pexel-wallpaper
+ExecStartPre=-/usr/bin/git pull --ff-only --quiet
+ExecStart=%h/.local/bin/uv run --quiet frame/frame_sync.py
+# Optional settings: FRAME_HOST, FRAME_MAC, FRAME_PHOTOS, FRAME_MINUTES, FRAME_REPLACE, FRAME_MATTE.
+EnvironmentFile=-%h/.config/pexel-frame/env
+TimeoutStartSec=8h
+Restart=on-failure
+RestartSec=30min

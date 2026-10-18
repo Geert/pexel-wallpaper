@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pexels Dynamic Wallpaper — a static web app (hosted on GitHub Pages at `docs/`) that displays a rotating slideshow of Pexels collection photos. Powers three frontends from a single codebase: Plash (macOS), Lively (Windows), and a Samsung Smart TV app built with Tizen Studio (`docs/config.xml`). A Node script fetches photo URLs from the Pexels API and writes them to a local text/JSON file used as the fallback source.
+Pexels Dynamic Wallpaper — a static web app (hosted on GitHub Pages at `docs/`) that displays a rotating slideshow of Pexels collection photos. Powers two frontends: Plash (macOS) and Lively (Windows). A Python sync script (`frame/frame_sync.py`) puts the same collection in the Art Mode of a Samsung The Frame TV. A Node script fetches photo URLs from the Pexels API and writes them to a local text/JSON file used as the fallback source.
 
 ## Commands
 
@@ -48,15 +48,15 @@ Static site served by GitHub Pages. All JS uses native ES modules (`.mjs`).
 ### Backend (`fetch_pexels_urls.mjs`)
 Standalone Node ESM script (zero deps) that fetches all photos from a hardcoded Pexels collection (`COLLECTION_ID = "vmnecek"`) with retry logic and rate limit (429) handling, writes URLs to `docs/pexels_photo_urls.txt` and metadata to `docs/pexels_photo_data.json`. Runs daily via GitHub Actions (`.github/workflows/update_photos.yml`).
 
-### Tizen / Samsung TV frontend
-- `docs/config.xml` is the Tizen widget manifest. CSP allows `connect-src 'self' https://geert.github.io` for the JSON fetch and `img-src https://images.pexels.com` for photos. No `script-src` other than `'self'` — Samsung Store rejects remote JS.
-- `docs/.tzpkgignore` lists files that don't need to be in the `.wgt`. The Tizen CLI does not currently honor it; the GUI does (Project Properties → Tizen Studio → Package).
-- Tizen detection: `isTizenTV()` checks `typeof tizen !== 'undefined' && typeof tizen.power !== 'undefined'`. When true: settings UI is hidden, URL params are ignored, `loadDefaults()` is called with `REMOTE_PHOTO_DATA_URL` instead of the relative path.
-- D-pad remote keys (arrow keys / OK / Play / Back) are wired unconditionally in `attachEventListeners` — they're no-ops outside Tizen unless the host (Plash interactive, browser) forwards keyboard events.
-- Package id (fixed in `config.xml`): `PxlWallppr.TizenWallpaper`.
-
-#### Deploying to a TV
-End-to-end build + install instructions, including the Jellyfin2Samsung sideload variant and troubleshooting, live in [`docs/DEPLOY-TIZEN.md`](docs/DEPLOY-TIZEN.md). The short version: `cd docs && tizen package -t wgt -s <profile> -- .` then `sdb connect <tv-ip>` and `tizen install -n "Pexel Wallpaper.wgt" -t <device>`. The TV must have Developer Mode on with its Host PC IP pointing at the deploying machine — a mismatch presents as `sdb connect` failing even though TCP port 26101 is open.
+### Samsung The Frame TV (`frame/`)
+- `frame/frame_sync.py` is a single `uv` script (PEP 723 inline deps: `samsungtvws`), modelled on [drnic/samsung-tv-art](https://github.com/drnic/samsung-tv-art). There is no app on the TV: the script uploads photos to Art Mode over the TV's local WebSocket API (port 8002, self-signed cert) and turns on the Art Mode slideshow on category `MY-C0002` (My Photos). API 0.97 firmware only knows `set_auto_rotation_status`; Geert's 2024 Frame (QE65LS03D, Art API 5.0.1.0) only answers `set_slideshow_status`, so `start_slideshow()` picks by API version. Favourites (`change_favorite`) fail with error -7 for own photos, and the slideshow ignores a `content_list`.
+- samsungtvws waits forever for a request the TV does not answer: every TV call goes through `tv_call()` with a SIGALRM timeout.
+- Pairing: the "Allow" prompt (about 30 s) only appears on the remote-control channel (`SamsungTVWS(...).open()`); without a token the Art channel hangs silently. The token is in `~/.config/pexel-frame/token`; never print it, and note that the TV echoes it in the `clients` list of `ms.channel.connect`.
+- Default: the whole collection on the TV (`--photos 0`, `--replace 0`): each run uploads new photos and deletes those that left the collection. A failed upload is treated as a full TV and stops the uploads.
+- It reads `pexels_photo_data.json` from GitHub Pages, skips portrait photos, and downloads a 3840x2160 crop from the Pexels CDN (`?cs=srgb&fit=crop&w=3840&h=2160`), so it needs no Pillow.
+- `plan()` is pure and tested in `frame/test_frame_sync.py` (`python3 -m unittest discover frame`, stdlib only; `samsungtvws` is imported lazily in `connect()`).
+- State in `~/.config/pexel-frame/state.json`: `uploaded` maps content id → Pexels id + upload date; `lastOnTv` drives the rotation for a rotating set. The script only deletes content ids in `uploaded`; if the state file is lost, the next run uploads everything again (duplicates).
+- Runs daily on rzdm5 (same LAN as the TV) as a systemd user timer: `frame/systemd/`. The service does `git pull` in `~/pexel-wallpaper` first, so merging to `main` is the deploy.
 
 ### Tests (`__tests__/script.test.js`)
 Jest with jsdom. Tests import directly from the ESM modules. `jest.setup.js` provides `fetch`, `TextEncoder`, and `matchMedia` mocks.

@@ -1,10 +1,4 @@
-import {
-  APP_VERSION,
-  LOCAL_IMAGE_DATA_FILE,
-  REMOTE_PHOTO_DATA_URL,
-  CHANGE_INTERVAL_MS,
-  STORAGE_KEYS,
-} from './config.mjs';
+import { APP_VERSION, LOCAL_IMAGE_DATA_FILE, CHANGE_INTERVAL_MS, STORAGE_KEYS } from './config.mjs';
 import {
   setStoredValue,
   getStoredValue,
@@ -38,21 +32,17 @@ let plashObserver = null;
 // --- DOM Helpers ---
 const $ = (id) => document.getElementById(id);
 
-// Keyboard / Samsung TV remote keys (numeric keyCode values).
+// Keyboard keys (numeric keyCode values).
 const KEYS = {
   ENTER: 13,
   PAUSE: 19,
   LEFT: 37,
   RIGHT: 39,
-  SAMSUNG_PLAY: 415,
-  SAMSUNG_BACK: 10009,
-  SAMSUNG_PLAY_PAUSE: 10252,
 };
 
 // --- Environment Detection ---
 
 export function detectEnvironment() {
-  if (isTizenTV()) return 'usageTizenTV';
   const ua = (navigator.userAgent || '').toLowerCase();
   const platform = (navigator.platform || '').toLowerCase();
   if (typeof window.livelyPropertyListener === 'function' || window.chrome?.webview) {
@@ -260,7 +250,7 @@ async function loadDefaults() {
       currentTranslations: t,
       showStatus,
       hideStatus,
-      localImageDataFile: isTizenTV() ? REMOTE_PHOTO_DATA_URL : LOCAL_IMAGE_DATA_FILE,
+      localImageDataFile: LOCAL_IMAGE_DATA_FILE,
       onMeta: (meta) => {
         photoMeta = meta;
         photoDataMeta = meta;
@@ -314,27 +304,11 @@ export function extractCollectionIdFromUrl(url) {
 
 // --- Settings Button Auto-Hide ---
 
-export function isTizenTV() {
-  try {
-    if (typeof tizen !== 'undefined') return true;
-    return /Tizen/i.test(navigator.userAgent || '');
-  } catch (_e) {
-    return false;
-  }
-}
-
 function initSettingsAutoHide() {
   const btn = $('settingsButton');
   const label = $('settingsButtonLabel');
   const indicator = $('usage-indicator');
   if (!btn) return;
-
-  // Hide settings button entirely on Samsung TV
-  if (isTizenTV()) {
-    btn.style.display = 'none';
-    if (label) label.style.display = 'none';
-    return;
-  }
 
   let hideTimer;
   let lastMove = 0;
@@ -434,12 +408,6 @@ function translatePage() {
 // --- Configuration ---
 
 function handleConfiguration() {
-  // Tizen TV: no settings UI, no URL params — always fetch the remote default JSON.
-  if (isTizenTV()) {
-    loadDefaults();
-    return;
-  }
-
   const params = new URLSearchParams(window.location.search);
   const apiKey = params.get('apiKey');
   const collectionUrl = params.get('collectionUrl');
@@ -511,14 +479,12 @@ function attachEventListeners() {
   $('settingsButton')?.addEventListener('click', showSettingsForm);
   $('closeFormButton')?.addEventListener('click', hideSettingsForm);
 
-  // Remote control & keyboard: description, next/prev, exit
+  // Keyboard: description, next/prev
   document.addEventListener('keydown', (e) => {
     const formOpen = !$('input-container')?.classList.contains('hidden');
     if (formOpen) return;
 
     switch (e.keyCode) {
-      case KEYS.SAMSUNG_PLAY:
-      case KEYS.SAMSUNG_PLAY_PAUSE:
       case KEYS.PAUSE:
       case KEYS.ENTER:
         togglePhotoInfo();
@@ -529,9 +495,6 @@ function attachEventListeners() {
         break;
       case KEYS.LEFT:
         slideshow?.prev();
-        break;
-      case KEYS.SAMSUNG_BACK:
-        if (isTizenTV()) tizen.application.getCurrentApplication().exit();
         break;
       default:
         if (e.key === 'i' || e.key === 'I') togglePhotoInfo();
@@ -574,29 +537,9 @@ function attachEventListeners() {
   });
 }
 
-// --- Tizen TV Integration ---
-
-function initTizen() {
-  if (!isTizenTV()) return;
-  try {
-    tizen.power?.request('SCREEN', 'SCREEN_NORMAL');
-    webapis?.appcommon?.setScreenSaver?.(
-      webapis.appcommon.AppCommonScreenSaverState.SCREEN_SAVER_OFF,
-      () => {},
-      () => {}
-    );
-    ['MediaPlay', 'MediaPlayPause', 'MediaPause'].forEach((key) =>
-      tizen.tvinputdevice?.registerKey(key)
-    );
-  } catch (error) {
-    console.warn('Tizen init failed:', error);
-  }
-}
-
 // --- Init ---
 
 document.addEventListener('DOMContentLoaded', async () => {
-  initTizen();
   initStatusOverlay($('status-overlay'));
 
   const { currentTranslations } = await initializeTranslations();
@@ -614,7 +557,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   observePlashClass();
   initSettingsAutoHide();
 
-  // Ensure page can receive key events (important for Samsung TV after redirect)
+  // Ensure page can receive key events
   document.body.tabIndex = -1;
   document.body.focus();
 });

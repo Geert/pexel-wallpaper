@@ -1,10 +1,10 @@
 # Pexels Dynamic Wallpaper
 
-Set your desktop or TV to a dynamic slideshow of beautiful images from your favorite Pexels collections. The same web app powers three frontends:
+Set your desktop or TV to a dynamic slideshow of beautiful images from your favorite Pexels collections. The web app powers macOS and Windows; a sync script brings the same collection to a Frame TV:
 
 - **macOS** via [Plash](https://apps.apple.com/us/app/plash/id1494023538) — hosts the live URL as a desktop background
 - **Windows** via [Lively](https://apps.microsoft.com/detail/9NTM2QC6QWS7) — same idea on Windows
-- **Samsung Smart TV** via a Tizen `.wgt` built from this repo — bundles the app locally, fetches photo metadata from GitHub Pages at runtime
+- **Samsung The Frame TV** via Art Mode — a sync script puts the collection photos on the TV, and the TV's own slideshow shows them
 
 [Live Demo](https://geert.github.io/pexel-wallpaper/)
 
@@ -26,24 +26,32 @@ To get started, follow these steps which are also displayed in the settings form
 2. **Add Web App to Lively:**
    *  In Lively, choose the + button, add this URL: `https://geert.github.io/pexel-wallpaper/`
 
-### Samsung Smart TV (Tizen)
+### Samsung The Frame TV (Art Mode)
 
-The TV build runs entirely from the bundled `.wgt`; it does not contact the Pexels API and shows no settings UI. Only the photo metadata JSON (`pexels_photo_data.json`) and the photo images themselves are fetched at runtime (allowed by the Samsung Store CSP).
+[`frame/frame_sync.py`](frame/frame_sync.py) works like [drnic/samsung-tv-art](https://github.com/drnic/samsung-tv-art): nothing is installed on the TV. A computer on the same network uploads photos to the Art Mode of the TV over its local WebSocket API ([samsungtvws](https://github.com/xchwarze/samsung-tv-ws-api)), and turns on the Art Mode slideshow.
 
-1. **Enable Developer Mode** on the TV (Apps screen → `12345` on the remote, set the Host PC IP, reboot the TV).
-2. **Package** `docs/` with Tizen Studio's CLI: `cd docs && tizen package -t wgt -s <profile> -- .` (or build via the Tizen Studio GUI).
-3. **Install** via `sdb connect <tv-ip>` → `tizen install -n "Pexel Wallpaper.wgt" -t <device>`.
+By default every landscape photo of the collection goes to *My Photos* on the TV, and the slideshow runs on *My Photos*. Each daily run uploads photos that are new in the collection and deletes photos that left it. With `--photos` and `--replace` it keeps a rotating set instead. It reads the collection from `pexels_photo_data.json` on GitHub Pages and asks the Pexels CDN for a 3840x2160 crop of each photo (about 1.5 MB). It only deletes images it uploaded itself. When the TV is full, it stops uploading and keeps what is on.
 
-Full instructions — including the Jellyfin2Samsung sideload variant, the required explicit `sdb connect` before `permit-install`, the no-spaces-in-filename gotcha, and other troubleshooting — live in [`docs/DEPLOY-TIZEN.md`](docs/DEPLOY-TIZEN.md).
+```bash
+uv run frame/frame_sync.py --dry-run   # print the plan
+uv run frame/frame_sync.py             # sync now
+uv run frame/frame_sync.py info        # art mode, current image, slideshow
+```
 
-Remote control:
+| Option | Environment | Default | |
+|---|---|---|---|
+| `--photos` | `FRAME_PHOTOS` | `0` (all) | photos on the TV at once |
+| `--minutes` | `FRAME_MINUTES` | `15` | minutes per photo |
+| `--replace` | `FRAME_REPLACE` | `0` | oldest uploads replaced per run |
+| `--matte` | `FRAME_MATTE` | `none` | e.g. `shadowbox_polar` |
+| `--host` | `FRAME_HOST` | found on the network | IP address of the TV |
+| `--mac` | `FRAME_MAC` | found on the network | for Wake-on-LAN |
 
-| Button | Action |
-|---|---|
-| OK / Enter / Play | Toggle photo info overlay (bottom-right) |
-| Right arrow | Next photo |
-| Left arrow | Previous photo |
-| Back | Exit app |
+With all 2004 photos and 15 minutes per photo, the slideshow takes about 21 days. For a daily set instead, `FRAME_PHOTOS=100 FRAME_REPLACE=100` gives 25 hours of new photos every day. The state (which content id holds which Pexels photo) and the pairing token live in `~/.config/pexel-frame/`.
+
+The TV must be on or in Art Mode to answer; when it is fully off, its Wi-Fi sleeps. Turn on *Settings > General > Network > Expert Settings > Power On with Mobile*, and give the TV a DHCP reservation. On the first connection the TV shows an "Allow" prompt for about 30 seconds; select *Allow* with the remote. On this TV (2024, Art API 5) the prompt only comes on the remote-control channel, and the Art Mode channel waits silently without a token. Art API 5 answers `set_slideshow_status`, not auto rotation, and cannot mark own photos as favourites.
+
+The daily run on rzdm5 is a systemd user timer, see [`frame/systemd/`](frame/systemd/). The tests run with `python3 -m unittest discover frame`.
 
 ### Configure Pexels Wallpaper
 1.  **Enter Pexels API Key:**
@@ -73,9 +81,9 @@ Your Desktop will now cycle through images from your selected Pexels collection!
 *   User-friendly setup through an interactive form (Plash/Lively/browser).
 *   Multi-language support (EN, NL, DE, FR).
 *   Bundled `pexels_photo_data.json` snapshot as a fallback when no API key is configured (refreshed daily by GitHub Actions).
-*   Samsung TV build (Tizen `.wgt`) that fetches photo metadata at runtime from GitHub Pages; no API key needed.
-*   Cache-first start with background refresh on the TV: instant slideshow from the previous launch's data, then quietly updates to the latest.
-*   Keyboard / remote navigation (arrow keys + OK) works in any interactive frontend.
+*   Samsung The Frame TV: a daily, rotating set of collection photos in Art Mode; no app on the TV.
+*   Cache-first start with background refresh: instant slideshow from the previous launch's data, then quietly updates to the latest.
+*   Keyboard navigation (arrow keys + Enter) works in any interactive frontend.
 
 ## License
 

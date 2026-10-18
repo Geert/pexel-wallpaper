@@ -48,7 +48,6 @@
         "usageBrowserMac": "Browser on macOS",
         "usageBrowserWindows": "Browser on Windows",
         "usageBrowserOther": "Browser",
-        "usageTizenTV": "Samsung TV",
         "instructions": {
             "mac": {
                 "step1Prefix": "Install Plash:",
@@ -143,7 +142,6 @@
         "usageBrowserMac": "Browser op macOS",
         "usageBrowserWindows": "Browser op Windows",
         "usageBrowserOther": "Browser",
-        "usageTizenTV": "Samsung TV",
         "instructions": {
             "mac": {
                 "step1Prefix": "Installeer Plash:",
@@ -238,7 +236,6 @@
         "usageBrowserMac": "Browser auf macOS",
         "usageBrowserWindows": "Browser auf Windows",
         "usageBrowserOther": "Browser",
-        "usageTizenTV": "Samsung TV",
         "instructions": {
             "mac": {
                 "step1Prefix": "Installieren Sie Plash:",
@@ -333,7 +330,6 @@
         "usageBrowserMac": "Navigateur sur macOS",
         "usageBrowserWindows": "Navigateur sur Windows",
         "usageBrowserOther": "Navigateur",
-        "usageTizenTV": "Samsung TV",
         "instructions": {
             "mac": {
                 "step1Prefix": "Installez Plash :",
