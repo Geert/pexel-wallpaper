@@ -68,7 +68,7 @@ class PlanTest(unittest.TestCase):
     def test_screen_url_asks_the_cdn_for_a_4k_crop(self):
         self.assertEqual(
             screen_url(photos(1)[0]),
-            "https://images.pexels.com/photos/0/p.jpeg?cs=srgb&fit=crop&w=3840&h=2160",
+            "https://images.pexels.com/photos/0/p.jpeg?cs=srgb&fm=jpg&fit=crop&w=3840&h=2160",
         )
 
 

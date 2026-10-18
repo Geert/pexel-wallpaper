@@ -81,9 +81,9 @@ def load_photos(url):
 
 
 def screen_url(photo):
-    """A JPG of the photo cropped to the screen size, made by the Pexels CDN."""
+    """A JPG of the photo cropped to the screen size, made by the Pexels CDN (also for PNGs)."""
     w, h = SCREEN
-    return f"{photo['imageUrl']}?cs=srgb&fit=crop&w={w}&h={h}"
+    return f"{photo['imageUrl']}?cs=srgb&fm=jpg&fit=crop&w={w}&h={h}"
 
 
 def download(url):
