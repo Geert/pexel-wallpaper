@@ -1,9 +1,13 @@
 """Tests for the sync plan. Run with: python3 -m unittest discover frame"""
 
 import random
+import threading
+import time
 import unittest
+from unittest import mock
 
-from frame_sync import plan, screen_url
+import frame_sync
+from frame_sync import TVTimeout, collection_id, fetch_collection, plan, screen_url, tv_call
 
 
 def photos(n):
@@ -70,6 +74,60 @@ class PlanTest(unittest.TestCase):
             screen_url(photos(1)[0]),
             "https://images.pexels.com/photos/0/p.jpeg?cs=srgb&fm=jpg&fit=crop&w=3840&h=2160",
         )
+
+
+class CollectionTest(unittest.TestCase):
+    def test_collection_id_from_url_or_id(self):
+        for value in [
+            "https://www.pexels.com/collections/wallpapers-vmnecek/",
+            "https://www.pexels.com/nl-nl/collections/wallpapers-vmnecek",
+            "vmnecek",
+        ]:
+            self.assertEqual(collection_id(value), "vmnecek")
+
+    def test_collection_id_rejects_other_urls(self):
+        with self.assertRaises(SystemExit):
+            collection_id("https://www.pexels.com/photo/1234/")
+
+    def test_fetch_collection_follows_pages_and_skips_videos(self):
+        def media(i, kind="Photo"):
+            return {"type": kind, "id": i, "width": 4000, "height": 2250, "alt": f"photo {i}",
+                    "photographer": "A", "src": {"original": f"https://images.pexels.com/{i}.jpeg"}}
+
+        pages = [
+            {"media": [media(1), media(2, "Video")], "next_page": "page 2"},
+            {"media": [media(3)]},
+        ]
+        with mock.patch.object(frame_sync, "get_json", side_effect=pages) as get:
+            photos = fetch_collection("abc", "key")
+        self.assertEqual([p["id"] for p in photos], [1, 3])
+        self.assertEqual(photos[0]["imageUrl"], "https://images.pexels.com/1.jpeg")
+        self.assertIn("page=2", get.call_args_list[1].args[0])
+        self.assertEqual(get.call_args_list[0].kwargs["headers"], {"Authorization": "key"})
+
+
+class TVCallTest(unittest.TestCase):
+    def test_returns_the_result(self):
+        self.assertEqual(tv_call(5, lambda: 42), 42)
+
+    def test_gives_up_on_a_call_that_hangs(self):
+        with self.assertRaises(TVTimeout):
+            tv_call(1, time.sleep, 5)
+
+    def test_gives_up_without_sigalrm_too(self):
+        # Outside the main thread, as on Windows, tv_call waits on a worker thread.
+        errors = []
+
+        def run():
+            try:
+                tv_call(1, time.sleep, 5)
+            except TVTimeout as e:
+                errors.append(e)
+
+        worker = threading.Thread(target=run)
+        worker.start()
+        worker.join(3)
+        self.assertEqual(len(errors), 1)
 
 
 if __name__ == "__main__":

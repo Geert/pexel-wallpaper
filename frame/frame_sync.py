@@ -2,20 +2,25 @@
 # requires-python = ">=3.11"
 # dependencies = ["samsungtvws>=3.0.6"]
 # ///
-"""Keep the Pexels collection in the Art Mode of a Samsung The Frame TV.
+"""Keep a Pexels collection in the Art Mode of a Samsung The Frame TV.
 
-By default every photo of the collection goes to My Photos on the TV, and the
-Art Mode slideshow runs on My Photos. Each run uploads photos that are new in
-the collection and deletes photos that left it. With --photos and --replace
-it keeps a rotating set instead: every run replaces the oldest uploads with
-photos that were on the TV longest ago, or never. It only deletes images it
-uploaded itself. When the TV is full, it stops uploading and keeps what is on.
+There is no app on the TV. This script runs on a computer on the same network,
+uploads the photos to My Photos in Art Mode over the TV's local WebSocket API,
+and turns on the Art Mode slideshow.
 
-Run it on a computer on the same network as the TV:
+By default every landscape photo of the collection goes on the TV. Each run
+uploads photos that are new in the collection and deletes photos that left
+it. With --photos and --replace it keeps a rotating set instead: every run
+replaces the oldest uploads with photos that were on the TV longest ago, or
+never. It only deletes images it uploaded itself. When the TV is full, it
+stops uploading and keeps what is on.
 
-    uv run frame/frame_sync.py              # sync now
-    uv run frame/frame_sync.py --dry-run    # print the plan only
-    uv run frame/frame_sync.py --host 192.168.2.50 info
+    uv run frame_sync.py pair        # once: select Allow on the TV
+    uv run frame_sync.py --dry-run   # print the plan
+    uv run frame_sync.py             # sync now
+    uv run frame_sync.py info        # art mode, current image, slideshow
+
+Docs: https://github.com/Geert/pexel-wallpaper/tree/main/frame
 """
 
 import argparse
@@ -23,23 +28,30 @@ import ipaddress
 import json
 import os
 import random
+import re
 import signal
 import socket
 import sys
+import threading
 import time
+import urllib.error
 import urllib.request
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from pathlib import Path
 
+# The default collection: https://www.pexels.com/collections/wallpapers-vmnecek/
+# GitHub Pages publishes it daily, so it needs no Pexels API key.
 PHOTO_DATA_URL = "https://geert.github.io/pexel-wallpaper/pexels_photo_data.json"
+PEXELS_API = "https://api.pexels.com/v1/"
 MY_PHOTOS = "MY-C0002"  # uploads land here, and the slideshow runs here
 SCREEN = (3840, 2160)
 CONFIG_DIR = Path(os.environ.get("FRAME_CONFIG_DIR", Path.home() / ".config" / "pexel-frame"))
 STATE_FILE = CONFIG_DIR / "state.json"
 TOKEN_FILE = CONFIG_DIR / "token"
-USER_AGENT = "PexelWallpaperFrame/1.0"
+CLIENT_NAME = "PexelWallpaper"  # shown on the TV in the Allow prompt and the device list
+USER_AGENT = "PexelWallpaperFrame/1.1 (github.com/Geert/pexel-wallpaper)"
 
 # The TV uses a self-signed certificate on port 8002.
 warnings.filterwarnings("ignore", message="Unverified HTTPS request")
@@ -72,12 +84,75 @@ def save_state(state):
 # --- Photos ---
 
 
-def load_photos(url):
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        data = json.load(r)
-    # Art Mode fills a 16:9 screen; the collection is almost all landscape.
-    return [p for p in data["photos"] if p["width"] > p["height"]]
+def collection_id(value):
+    """Accept a collection id or a URL like https://www.pexels.com/collections/name-abc1234/."""
+    value = value.strip().rstrip("/")
+    match = re.search(r"/collections/(?:[^/]*-)?([A-Za-z0-9]+)$", value)
+    if match:
+        return match.group(1)
+    if re.fullmatch(r"[A-Za-z0-9]+", value):
+        return value
+    sys.exit(f"error: {value!r} is not a Pexels collection id or URL")
+
+
+def get_json(url, headers=None, retries=3):
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **(headers or {})})
+    for attempt in range(1, retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                sys.exit("error: Pexels rejected the API key (HTTP 401). Check PEXELS_API_KEY.")
+            if e.code == 404:
+                sys.exit(f"error: not found (HTTP 404): {url}")
+            if attempt == retries or e.code not in (429, 500, 502, 503, 504):
+                raise
+            wait = int(e.headers.get("Retry-After") or 0) or 5 * attempt
+        except OSError:
+            if attempt == retries:
+                raise
+            wait = 5 * attempt
+        log(f"request failed, retrying in {wait} s")
+        time.sleep(wait)
+
+
+def fetch_collection(cid, api_key):
+    """Return the photos of a Pexels collection, in the shape of pexels_photo_data.json."""
+    photos, page = [], 1
+    while True:
+        data = get_json(
+            f"{PEXELS_API}collections/{cid}?type=photos&per_page=80&page={page}",
+            headers={"Authorization": api_key},
+        )
+        for m in data.get("media", []):
+            if m.get("type", "Photo").lower() != "photo":
+                continue
+            photos.append({
+                "id": m["id"],
+                "imageUrl": m["src"]["original"],
+                "width": m["width"],
+                "height": m["height"],
+                "alt": m.get("alt"),
+                "photographer": m.get("photographer"),
+            })
+        if not data.get("next_page"):
+            return photos
+        page += 1
+
+
+def load_photos(args):
+    if args.collection:
+        if not args.pexels_api_key:
+            sys.exit("error: --collection needs a Pexels API key in PEXELS_API_KEY "
+                     "(free at https://www.pexels.com/api/)")
+        cid = collection_id(args.collection)
+        log(f"reading Pexels collection {cid}")
+        photos = fetch_collection(cid, args.pexels_api_key)
+    else:
+        photos = get_json(args.photo_data_url)["photos"]
+    # Art Mode fills a 16:9 screen, so portrait photos would lose most of the picture.
+    return [p for p in photos if p["width"] > p["height"]]
 
 
 def screen_url(photo):
@@ -140,17 +215,37 @@ def tv_call(seconds, fn, *args, **kwargs):
     samsungtvws waits forever for a request the TV does not answer, such as
     get_auto_rotation_status on API 5 firmware.
     """
+    message = f"{getattr(fn, '__name__', 'request')}: no answer from the TV in {seconds} s"
+    if hasattr(signal, "SIGALRM") and threading.current_thread() is threading.main_thread():
 
-    def expired(*_):
-        raise TVTimeout(f"{fn.__name__}: no answer from the TV in {seconds} s")
+        def expired(*_):
+            raise TVTimeout(message)
 
-    previous = signal.signal(signal.SIGALRM, expired)
-    signal.alarm(seconds)
-    try:
-        return fn(*args, **kwargs)
-    finally:
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, previous)
+        previous = signal.signal(signal.SIGALRM, expired)
+        signal.alarm(seconds)
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, previous)
+
+    # Windows has no SIGALRM: run the call in a thread and stop waiting for it.
+    result = {}
+
+    def run():
+        try:
+            result["value"] = fn(*args, **kwargs)
+        except BaseException as e:  # noqa: BLE001 - re-raised below
+            result["error"] = e
+
+    worker = threading.Thread(target=run, daemon=True)
+    worker.start()
+    worker.join(seconds)
+    if worker.is_alive():
+        raise TVTimeout(message)
+    if "error" in result:
+        raise result["error"]
+    return result["value"]
 
 
 def new_slideshow_api(art):
@@ -186,16 +281,19 @@ def local_ip():
         return s.getsockname()[0]
 
 
-def discover():
-    """Find a Frame TV on the local /24 network."""
+def find_frames():
+    """Every Frame TV on the local /24 network."""
     net = ipaddress.ip_network(f"{local_ip()}/24", strict=False)
     with ThreadPoolExecutor(64) as pool:
         infos = pool.map(tv_info, (str(h) for h in net.hosts()))
-    frames = [i for i in infos if i and i.get("FrameTVSupport") == "true"]
-    if len(frames) != 1:
-        return None
-    log(f"found {frames[0].get('modelName', 'Frame TV')} at {frames[0]['ip']}")
-    return frames[0]
+    return [i for i in infos if i and i.get("FrameTVSupport") == "true"]
+
+
+def remember(state, info):
+    state["host"] = info["ip"]
+    if info.get("wifiMac"):
+        state["mac"] = info["wifiMac"].lower()
+    save_state(state)
 
 
 def wake(mac, host):
@@ -222,22 +320,46 @@ def find_tv(args, state):
                 return host
     if args.host:
         sys.exit(f"error: no Samsung TV answered at {args.host}")
-    info = discover()
-    if not info:
-        sys.exit("error: found no Frame TV. Turn the TV on, or pass --host or set FRAME_HOST.")
-    state["host"] = info["ip"]
-    if info.get("wifiMac"):
-        state["mac"] = info["wifiMac"].lower()
-    save_state(state)
-    return info["ip"]
+    frames = find_frames()
+    if len(frames) != 1:
+        sys.exit(f"error: found {len(frames)} Frame TVs. Turn the TV on, or pass --host "
+                 "or set FRAME_HOST.")
+    log(f"found {frames[0].get('modelName', 'a Frame TV')} at {frames[0]['ip']}")
+    remember(state, frames[0])
+    return frames[0]["ip"]
+
+
+def pair(host):
+    """Get a token. The TV shows an Allow prompt for about 30 seconds.
+
+    On API 5 firmware the prompt only comes on the remote-control channel; the
+    Art Mode channel waits silently without a token.
+    """
+    from samsungtvws import SamsungTVWS
+
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    log(f"Select Allow on the TV now. The prompt for {CLIENT_NAME} closes after about 30 seconds.")
+    tv = SamsungTVWS(host=host, port=8002, token_file=str(TOKEN_FILE), name=CLIENT_NAME, timeout=60)
+    try:
+        tv.open()
+    except Exception as e:  # noqa: BLE001 - samsungtvws raises several types
+        sys.exit(f"error: pairing failed ({type(e).__name__}: {e}). Run `pair` again and "
+                 "select Allow on the TV within 30 seconds.")
+    finally:
+        tv.close()
+    if not TOKEN_FILE.exists():
+        sys.exit("error: the TV did not hand out a token. Run `pair` again.")
+    TOKEN_FILE.chmod(0o600)
+    log(f"paired, the token is in {TOKEN_FILE}")
 
 
 def connect(host, timeout):
     from samsungtvws import SamsungTVWS
 
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    if not TOKEN_FILE.exists():
+        pair(host)
     tv = SamsungTVWS(
-        host=host, port=8002, token_file=str(TOKEN_FILE), name="PexelWallpaper", timeout=timeout
+        host=host, port=8002, token_file=str(TOKEN_FILE), name=CLIENT_NAME, timeout=timeout
     )
     return tv.art()
 
@@ -247,7 +369,7 @@ def connect(host, timeout):
 
 def cmd_sync(args):
     state = load_state()
-    photos = load_photos(args.photo_data_url)
+    photos = load_photos(args)
     log(f"{len(photos)} landscape photos in the collection")
     today = date.today().isoformat()
 
@@ -268,8 +390,10 @@ def cmd_sync(args):
     log(f"plan: upload {len(to_upload)}, delete {len(to_delete)}, "
         f"keep {len(state['uploaded']) - len(to_delete)}")
     if args.dry_run:
-        for p in to_upload:
+        for p in to_upload[:20]:
             log(f"  + {p['id']}  {(p.get('alt') or '')[:70]}")
+        if len(to_upload) > 20:
+            log(f"  ... and {len(to_upload) - 20} more")
         return
 
     # Delete one old image after each upload, so the TV never holds more than
@@ -327,30 +451,62 @@ def cmd_info(args):
     }, indent=2))
 
 
+def cmd_pair(args):
+    pair(find_tv(args, load_state()))
+
+
+def cmd_discover(args):
+    state = load_state()
+    frames = [tv_info(args.host, timeout=3)] if args.host else find_frames()
+    frames = [f for f in frames if f]
+    for f in frames:
+        mac, model = f.get("wifiMac", ""), f.get("modelName", "")
+        log(f"{f['ip']:<16} {mac:<18} {model}  {f.get('name', '')}")
+    if len(frames) != 1:
+        sys.exit(f"found {len(frames)} Frame TVs. Pass --host to pick one."
+                 if frames else "error: found no Frame TV. Is it on, and on this network?")
+    remember(state, frames[0])
+    log(f"saved to {STATE_FILE}")
+
+
 def env_int(name, default):
     return int(os.environ.get(name, default))
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(
+        description=__doc__.split("\n\n")[0],
+        epilog="Every option can also be set as the environment variable in brackets.",
+    )
+    parser.add_argument("command", nargs="?", default="sync",
+                        choices=["sync", "pair", "info", "discover"],
+                        help="sync (default), pair with the TV, show info, or find the TV")
+    parser.add_argument("--collection", default=os.environ.get("PEXELS_COLLECTION"),
+                        help="Pexels collection id or URL (PEXELS_COLLECTION); needs "
+                             "PEXELS_API_KEY. Default: the collection at --photo-data-url")
+    parser.add_argument("--pexels-api-key", default=os.environ.get("PEXELS_API_KEY"),
+                        help=argparse.SUPPRESS)
+    parser.add_argument("--photo-data-url",
+                        default=os.environ.get("PHOTO_DATA_URL", PHOTO_DATA_URL),
+                        help="JSON list of photos (PHOTO_DATA_URL), used without --collection")
     parser.add_argument("--host", default=os.environ.get("FRAME_HOST"),
                         help="IP address of the TV (FRAME_HOST); found on the network if omitted")
     parser.add_argument("--mac", default=os.environ.get("FRAME_MAC"),
                         help="MAC address for Wake-on-LAN (FRAME_MAC)")
     parser.add_argument("--photos", type=int, default=env_int("FRAME_PHOTOS", 0),
-                        help="photos on the TV at once, 0 for all (FRAME_PHOTOS, default all)")
-    parser.add_argument("--minutes", type=int, default=env_int("FRAME_MINUTES", 15),
-                        help="minutes per photo (FRAME_MINUTES, default 15)")
+                        help="photos on the TV at once, 0 for all (FRAME_PHOTOS, default 0)")
     parser.add_argument("--replace", type=int, default=env_int("FRAME_REPLACE", 0),
                         help="oldest uploads to replace per run (FRAME_REPLACE, default 0)")
+    parser.add_argument("--minutes", type=int, default=env_int("FRAME_MINUTES", 15),
+                        help="minutes per photo in the slideshow (FRAME_MINUTES, default 15)")
     parser.add_argument("--matte", default=os.environ.get("FRAME_MATTE", "none"),
                         help="matte, e.g. none or shadowbox_polar (FRAME_MATTE, default none)")
-    parser.add_argument("--photo-data-url", default=os.environ.get("PHOTO_DATA_URL", PHOTO_DATA_URL))
-    parser.add_argument("--timeout", type=int, default=30)
-    parser.add_argument("--dry-run", action="store_true", help="print the plan, do not touch the TV")
-    parser.add_argument("command", nargs="?", default="sync", choices=["sync", "info"])
+    parser.add_argument("--timeout", type=int, default=30, help=argparse.SUPPRESS)
+    parser.add_argument("--dry-run", action="store_true",
+                        help="print the plan, do not touch the TV")
     args = parser.parse_args()
-    {"sync": cmd_sync, "info": cmd_info}[args.command](args)
+    commands = {"sync": cmd_sync, "pair": cmd_pair, "info": cmd_info, "discover": cmd_discover}
+    commands[args.command](args)
 
 
 if __name__ == "__main__":
