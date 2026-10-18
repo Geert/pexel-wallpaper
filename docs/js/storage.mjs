@@ -91,7 +91,7 @@ const PHOTO_DATA_CACHE_KEY = 'pexelWallpaper.photoDataCache';
 export function cachePhotoData(url, data) {
   try {
     // Trim photo objects to only the fields the slideshow actually reads,
-    // keeping the cache small enough to fit Tizen webview localStorage quotas.
+    // keeping the cache well within localStorage quotas.
     const trimmed = {
       updatedAt: data?.updatedAt || null,
       photos: Array.isArray(data?.photos)

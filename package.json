@@ -2,7 +2,7 @@
   "name": "pexel-wallpaper",
   "version": "1.11.0",
   "private": true,
-  "description": "Dynamic Pexels-powered wallpaper slideshow for macOS (Plash), Windows (Lively), and Samsung Smart TVs (Tizen).",
+  "description": "Dynamic Pexels-powered wallpaper slideshow for macOS (Plash), Windows (Lively), and Samsung The Frame TVs (Art Mode).",
   "homepage": "https://geert.github.io/pexel-wallpaper/",
   "repository": {
     "type": "git",
@@ -13,8 +13,7 @@
     "pexels",
     "wallpaper",
     "slideshow",
-    "tizen",
-    "samsung-tv",
+    "samsung-frame",
     "plash",
     "lively"
   ],
