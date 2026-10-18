@@ -5,8 +5,10 @@
 """Keep a rotating set of Pexels photos in the Art Mode of a Samsung The Frame TV.
 
 Every run replaces the photos this script put on the TV with photos from the
-collection that were on the TV longest ago (or never), and turns on the Art
-Mode slideshow. It only deletes images it uploaded itself.
+collection that were on the TV longest ago (or never). It marks them as
+favourites and runs the Art Mode slideshow on Favourites, so your own photos
+in My Photos stay on the TV but out of the slideshow. It only deletes images
+it uploaded itself.
 
 Run it on a computer on the same network as the TV:
 
@@ -20,6 +22,7 @@ import ipaddress
 import json
 import os
 import random
+import signal
 import socket
 import sys
 import time
@@ -30,7 +33,8 @@ from datetime import date
 from pathlib import Path
 
 PHOTO_DATA_URL = "https://geert.github.io/pexel-wallpaper/pexels_photo_data.json"
-CATEGORY = "MY-C0002"  # "My Photos" on the TV
+MY_PHOTOS = "MY-C0002"  # uploads land here
+FAVOURITES = "MY-C0004"  # the slideshow runs here
 SCREEN = (3840, 2160)
 CONFIG_DIR = Path(os.environ.get("FRAME_CONFIG_DIR", Path.home() / ".config" / "pexel-frame"))
 STATE_FILE = CONFIG_DIR / "state.json"
@@ -126,6 +130,47 @@ def plan(photos, uploaded, last_on_tv, count, replace, rng):
 # --- TV ---
 
 
+class TVTimeout(Exception):
+    pass
+
+
+def tv_call(seconds, fn, *args, **kwargs):
+    """Call the TV, but give up after `seconds`.
+
+    samsungtvws waits forever for a request the TV does not answer, such as
+    get_auto_rotation_status on API 5 firmware.
+    """
+
+    def expired(*_):
+        raise TVTimeout(f"{fn.__name__}: no answer from the TV in {seconds} s")
+
+    previous = signal.signal(signal.SIGALRM, expired)
+    signal.alarm(seconds)
+    try:
+        return fn(*args, **kwargs)
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def new_slideshow_api(art):
+    """API 0.97 firmware only knows auto rotation; API 5 only answers slideshow."""
+    version = tv_call(30, art.get_api_version)
+    return int(str(version).split(".")[0]) >= 1
+
+
+def start_slideshow(art, minutes):
+    fn = art.set_slideshow_status if new_slideshow_api(art) else art.set_auto_rotation_status
+    return tv_call(60, fn, duration=minutes, type=True, category_id=FAVOURITES)
+
+
+def slideshow_status(art):
+    fn = art.get_slideshow_status if new_slideshow_api(art) else art.get_auto_rotation_status
+    status = tv_call(60, fn)
+    status.pop("content_list", None)
+    return status
+
+
 def tv_info(host, timeout=1):
     """Return the REST API device info of a Samsung TV, or None."""
     try:
@@ -209,7 +254,7 @@ def cmd_sync(args):
     art = None
     if not args.dry_run:
         art = connect(find_tv(args, state), args.timeout)
-        on_tv = {item["content_id"] for item in art.available(CATEGORY)}
+        on_tv = {item["content_id"] for item in tv_call(60, art.available, MY_PHOTOS)}
         missing = [cid for cid in state["uploaded"] if cid not in on_tv]
         for cid in missing:
             del state["uploaded"][cid]
@@ -237,10 +282,13 @@ def cmd_sync(args):
         except (OSError, ValueError) as e:
             log(f"skip {photo['id']}: {e}")
             continue
-        content_id = art.upload(data, file_type="jpg", matte=args.matte, portrait_matte=args.matte)
+        content_id = tv_call(
+            180, art.upload, data, file_type="jpg", matte=args.matte, portrait_matte=args.matte
+        )
         state["uploaded"][content_id] = {"pexelsId": photo["id"], "since": today}
         state["lastOnTv"][str(photo["id"])] = today
         uploaded += 1
+        favourite(art, content_id)
         if pending:
             delete(art, state, [pending.pop(0)])
         save_state(state)
@@ -251,12 +299,25 @@ def cmd_sync(args):
         state["lastOnTv"][str(u["pexelsId"])] = today
     save_state(state)
 
-    art.set_auto_rotation_status(duration=args.minutes, type=True, category_id=CATEGORY)
-    log(f"slideshow: {len(state['uploaded'])} photos, {args.minutes} minutes each")
+    # Uploads from an earlier run that never became a favourite.
+    favourites = {i["content_id"] for i in tv_call(60, art.available, FAVOURITES)}
+    for content_id in state["uploaded"]:
+        if content_id not in favourites:
+            favourite(art, content_id)
+
+    start_slideshow(art, args.minutes)
+    log(f"slideshow on Favourites: {len(state['uploaded'])} photos, {args.minutes} minutes each")
+
+
+def favourite(art, content_id):
+    try:
+        tv_call(60, art.set_favourite, content_id, "on")
+    except TVTimeout as e:
+        log(f"warning: {e}")
 
 
 def delete(art, state, content_ids):
-    if not art.delete_list(content_ids):
+    if not tv_call(120, art.delete_list, content_ids):
         log(f"warning: the TV did not confirm deleting {', '.join(content_ids)}")
     for cid in content_ids:
         state["uploaded"].pop(cid, None)
@@ -266,10 +327,12 @@ def cmd_info(args):
     state = load_state()
     art = connect(find_tv(args, state), args.timeout)
     print(json.dumps({
-        "art_mode": art.get_artmode(),
-        "current": art.get_current(),
-        "slideshow": art.get_auto_rotation_status(),
-        "my_photos": len(art.available(CATEGORY)),
+        "api_version": tv_call(30, art.get_api_version),
+        "art_mode": tv_call(30, art.get_artmode),
+        "current": tv_call(30, art.get_current),
+        "slideshow": slideshow_status(art),
+        "my_photos": len(tv_call(60, art.available, MY_PHOTOS)),
+        "favourites": len(tv_call(60, art.available, FAVOURITES)),
         "uploaded_by_sync": len(state["uploaded"]),
     }, indent=2))
 
