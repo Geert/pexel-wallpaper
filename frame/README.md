@@ -211,5 +211,5 @@ python3 -m unittest discover frame
 
 - [drnic/samsung-tv-art](https://github.com/drnic/samsung-tv-art) showed how to drive Art Mode over the local network.
 - [samsungtvws](https://github.com/xchwarze/samsung-tv-ws-api) implements the TV's WebSocket API.
-- Photos come from [Pexels](https://www.pexels.com) under the [Pexels license](https://www.pexels.com/license/). The photos of the default collection are by [Geert Rozendom](https://www.pexels.com/@joepkoek). If you use the Pexels API for your own collection, follow the [Pexels API guidelines](https://www.pexels.com/api/documentation/#guidelines).
+- Photos come from [Pexels](https://www.pexels.com) under the [Pexels license](https://www.pexels.com/license/). The photos of the default collection are by [Geert Rozendom](https://www.pexels.com/@geert). If you use the Pexels API for your own collection, follow the [Pexels API guidelines](https://www.pexels.com/api/documentation/#guidelines).
 - The code is under the [MIT license](../LICENSE).
